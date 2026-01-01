@@ -3,32 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>codetbase - 홈</title>
+    
+    <title>Up Sword</title>
+    
+    <link rel="icon" href="https://i.ifh.cc/vXLMs6.jpg" type="image/x-icon">
+    <link rel="shortcut icon" href="https://i.ifh.cc/vXLMs6.jpg" type="image/x-icon">
+    
+    <meta property="og:title" content="Up Sword">
+    <meta property="og:image" content="https://i.ifh.cc/rvTcHw.jpg">
+    <meta property="og:description" content="자체 제작 강화게임 Up Sword">
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { background: #f0f0f0; font-family: 'Pretendard', sans-serif; margin: 0; padding: 20px 0; display: flex; flex-direction: column; align-items: center; }
         .app-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box; padding: 0 20px; }
         
-        /* 프로필 카드 상단 */
+        /* 프로필 카드 */
         .profile-card { background: white; border: 3px solid black; border-radius: 30px; padding: 20px; box-sizing: border-box; }
         .user-info { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
         .user-text h2 { margin: 0; font-size: 24px; font-weight: 900; }
         .profile-img { width: 70px; height: 70px; border-radius: 50%; border: 2px solid #000; object-fit: cover; background: #eee; }
         
-        /* 재화 표시 박스 */
-        .gold-box { background: #eee; border-radius: 20px; padding: 10px 20px; display: flex; flex-direction: column; gap: 5px; margin-bottom: 5px; }
-        .gold-label { font-weight: 900; font-size: 22px; margin-right: 10px; }
+        .gold-box { background: #eee; border-radius: 20px; padding: 10px 20px; display: flex; flex-direction: column; gap: 5px; margin-bottom: 15px; }
+        .gold-label { font-weight: 900; font-size: 22px; }
         .gold-value { color: #f39c12; font-weight: 900; font-size: 22px; }
         .money-value { color: #9b59b6; font-weight: 900; font-size: 22px; }
 
-        /* 이미지 시안과 동일한 2x2 버튼 그리드 */
-        .top-btns-grid { background: white; border: 3px solid black; border-radius: 25px; padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .grid-btn { border: none; border-radius: 15px; padding: 12px; font-weight: 900; font-size: 18px; cursor: pointer; transition: 0.2s; }
+        /* 2x2 버튼 그리드 (시안 반영) */
+        .button-grid-container { background: white; border: 3px solid black; border-radius: 30px; padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .grid-btn { border: none; border-radius: 20px; padding: 12px; font-weight: 900; font-size: 18px; cursor: pointer; transition: 0.2s; }
         .btn-gray { background: #ddd; color: #333; }
         .btn-pink { background: #ff9a9e; color: #333; }
         .btn-purple { background: #d4bfff; color: #333; }
 
-        /* 중앙 게임 카드 영역 */
+        /* 게임 카드 */
         .game-selection { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .game-card { width: 100%; cursor: pointer; border-radius: 20px; overflow: hidden; border: 1px solid #ddd; }
         .game-card img { width: 100%; display: block; }
@@ -39,7 +47,7 @@
         .bottom-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .menu-btn { background: #c2cfff; border: none; border-radius: 20px; padding: 15px; font-weight: 900; font-size: 20px; cursor: pointer; }
 
-        /* 모달 스타일 (기존 코드 유지) */
+        /* 모달 스타일 */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; }
         .modal-content { background: white; width: 85%; max-width: 350px; border-radius: 25px; padding: 25px; position: relative; max-height: 90vh; overflow-y: auto; }
         .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; font-weight: bold; }
@@ -64,7 +72,7 @@
         </div>
     </div>
 
-    <div class="top-btns-grid">
+    <div class="button-grid-container">
         <button class="grid-btn btn-gray" onclick="openRank()">랭킹</button>
         <button class="grid-btn btn-gray" onclick="handleDailyCheck()">출석체크</button>
         <button class="grid-btn btn-pink" onclick="location.href='battle.html'">배틀</button>
@@ -86,42 +94,47 @@
     </div>
 </div>
 
-<div id="info-modal" class="modal"><div class="modal-content">
-    <span class="close-btn" onclick="closeModal('info-modal')">&times;</span>
-    <h2 style="text-align:center;">👤 내 정보 수정</h2>
-    <div style="text-align:center; margin-bottom: 20px;">
-        <img id="edit-avatar-prev" src="" style="width:80px; height:80px; border-radius:50%; border:2px solid #ddd; object-fit:cover;">
-        <input type="file" id="avatar-file" accept="image/*" style="display:none;" onchange="uploadAndPreview(this.files[0])">
-        <div style="display:flex; gap:5px; justify-content:center; margin-top:10px;">
-            <button onclick="document.getElementById('avatar-file').click()">사진 변경</button>
-            <button onclick="resetToDefaultAvatar()">기본 이미지</button>
+<div id="info-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModal('info-modal')">&times;</span>
+        <h2 style="text-align:center;">👤 내 정보 수정</h2>
+        <div style="text-align:center; margin-bottom: 20px;">
+            <img id="edit-avatar-prev" src="" style="width:80px; height:80px; border-radius:50%; border:2px solid #ddd; object-fit:cover;">
+            <input type="file" id="avatar-file" accept="image/*" style="display:none;" onchange="uploadAndPreview(this.files[0])">
+            <div style="display:flex; gap:5px; justify-content:center; margin-top:10px;">
+                <button onclick="document.getElementById('avatar-file').click()" style="cursor:pointer; padding:5px 10px;">사진 변경</button>
+                <button onclick="resetToDefaultAvatar()" style="cursor:pointer; padding:5px 10px; background:#eee; border:1px solid #ccc;">기본 이미지</button>
+            </div>
+        </div>
+        <div class="edit-group"><label>닉네임</label><input type="text" id="edit-nick"></div>
+        <div class="edit-group"><label>전화번호</label><input type="text" id="edit-phone"></div>
+        <div class="edit-group"><label>새 비밀번호 (6자 이상)</label><input type="password" id="edit-pw" placeholder="변경 시에만 입력"></div>
+        <button class="btn-update" id="save-btn" onclick="saveMyInfo()">수정 내용 저장</button>
+        <button class="btn-logout" onclick="handleLogout()">로그아웃</button>
+    </div>
+</div>
+
+<div id="rank-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModal('rank-modal')">&times;</span>
+        <h2 style="text-align:center;">🏆 TOP 10 랭킹</h2>
+        <div id="rank-list"></div>
+    </div>
+</div>
+
+<div id="gmLoginModal" class="modal">
+    <div class="modal-content">
+        <h2 style="text-align:center;">GM 로그인</h2>
+        <div class="edit-group"><label>아이디</label><input type="text" id="gmUsername"></div>
+        <div class="edit-group"><label>비밀번호</label><input type="password" id="gmPassword"></div>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-update" onclick="handleGMLogin()">로그인</button>
+            <button class="btn-logout" onclick="hideGMLogin()" style="background:#666;">취소</button>
         </div>
     </div>
-    <div class="edit-group"><label>닉네임</label><input type="text" id="edit-nick"></div>
-    <div class="edit-group"><label>전화번호</label><input type="text" id="edit-phone"></div>
-    <div class="edit-group"><label>새 비밀번호 (6자 이상)</label><input type="password" id="edit-pw" placeholder="변경 시에만 입력"></div>
-    <button class="btn-update" id="save-btn" onclick="saveMyInfo()">수정 내용 저장</button>
-    <button class="btn-logout" onclick="handleLogout()">로그아웃</button>
-</div></div>
-
-<div id="rank-modal" class="modal"><div class="modal-content">
-    <span class="close-btn" onclick="closeModal('rank-modal')">&times;</span>
-    <h2 style="text-align:center;">🏆 TOP 10 랭킹</h2>
-    <div id="rank-list"></div>
-</div></div>
-
-<div id="gmLoginModal" class="modal"><div class="modal-content">
-    <h2 style="text-align:center;">GM 로그인</h2>
-    <div class="edit-group"><label>아이디</label><input type="text" id="gmUsername"></div>
-    <div class="edit-group"><label>비밀번호</label><input type="password" id="gmPassword"></div>
-    <div style="display: flex; gap: 10px;">
-        <button class="btn-update" onclick="handleGMLogin()">로그인</button>
-        <button class="btn-logout" onclick="hideGMLogin()">취소</button>
-    </div>
-</div></div>
+</div>
 
 <script>
-    // 원본 로직 복구
     let supabaseClient;
     const DEFAULT_AVATAR = "https://www.pngarts.com/files/10/Default-Profile-Picture-Download-PNG-Image.png";
     let user = null;
@@ -135,10 +148,10 @@
     async function init() {
         initSupabase();
         const { data: { session } } = await supabaseClient.auth.getSession();
-        if(!session) { location.href="login.html"; return; }
+        if(!session) { window.location.href="login.html"; return; }
         
-        const { data: p } = await supabaseClient.from('profiles').select('*').eq('id', session.user.id).single();
-        if(!p) { location.href="login.html"; return; }
+        const { data: p, error } = await supabaseClient.from('profiles').select('*').eq('id', session.user.id).single();
+        if(error || !p) { window.location.href="login.html"; return; }
         
         user = p;
         updateUI();
@@ -152,36 +165,61 @@
         document.getElementById('u-avatar').src = user.avatar_url || DEFAULT_AVATAR;
     }
 
-    // 출석체크 로직 복구
+    // 내 정보 저장 로직 복구
+    async function saveMyInfo() {
+        const btn = document.getElementById('save-btn');
+        btn.innerText = "저장 중...";
+        btn.disabled = true;
+
+        const newNick = document.getElementById('edit-nick').value.trim();
+        const newPhone = document.getElementById('edit-phone').value.trim();
+        const newAvatar = document.getElementById('edit-avatar-prev').src;
+        const newPw = document.getElementById('edit-pw').value;
+
+        try {
+            const { error: updateError } = await supabaseClient
+                .from('profiles')
+                .update({ nickname: newNick, phone: newPhone, avatar_url: newAvatar })
+                .eq('id', user.id);
+
+            if(updateError) throw updateError;
+
+            if(newPw && newPw.length >= 6) { 
+                await supabaseClient.auth.updateUser({ password: newPw });
+            }
+
+            alert("정보가 수정되었습니다.");
+            window.location.reload();
+        } catch (e) {
+            alert("저장 실패: " + e.message);
+            btn.innerText = "수정 내용 저장";
+            btn.disabled = false;
+        }
+    }
+
+    async function uploadAndPreview(file) {
+        if(!file) return;
+        const { data, error } = await supabaseClient.storage.from('codet-img').upload(`avatars/${user.id}_${Date.now()}`, file);
+        if(error) return alert("업로드 실패");
+        const { data: { publicUrl } } = supabaseClient.storage.from('codet-img').getPublicUrl(data.path);
+        document.getElementById('edit-avatar-prev').src = publicUrl;
+    }
+
+    function resetToDefaultAvatar() { document.getElementById('edit-avatar-prev').src = DEFAULT_AVATAR; }
+
     async function handleDailyCheck() {
         const today = new Date().toLocaleDateString();
         const lastCheck = localStorage.getItem(`daily_chk_${user.id}`);
         if (lastCheck === today) return alert("이미 오늘 출석하셨습니다.");
         
-        const newGold = (parseInt(user.gold) || 0) + 10000;
-        const { error } = await supabaseClient.from('profiles').update({ gold: newGold }).eq('id', user.id);
-        
+        const { error } = await supabaseClient.from('profiles').update({ gold: user.gold + 10000 }).eq('id', user.id);
         if (!error) {
             localStorage.setItem(`daily_chk_${user.id}`, today);
-            user.gold = newGold;
-            alert("10,000G 출석 보상이 지급되었습니다!");
-            updateUI();
+            alert("10,000G 지급 완료!");
+            location.reload();
         }
     }
 
-    // GM 로그인 로직
-    function showGMLogin() { document.getElementById('gmLoginModal').style.display = 'flex'; }
-    function hideGMLogin() { document.getElementById('gmLoginModal').style.display = 'none'; }
-    function handleGMLogin() {
-        const u = document.getElementById('gmUsername').value;
-        const p = document.getElementById('gmPassword').value;
-        if(u === 'yejun' && p === '1234321') {
-            sessionStorage.setItem('gmAuthenticated', 'true');
-            location.href = 'gm.html';
-        } else { alert('인증 실패'); }
-    }
-
-    // 랭킹 로직
     async function openRank() {
         openModal('rank-modal');
         const { data } = await supabaseClient.from('profiles').select('nickname, gold').order('gold', { ascending: false }).limit(10);
@@ -193,7 +231,15 @@
         `).join('');
     }
 
-    // 기타 필수 함수
+    function showGMLogin() { openModal('gmLoginModal'); }
+    function hideGMLogin() { closeModal('gmLoginModal'); }
+    function handleGMLogin() {
+        if(document.getElementById('gmUsername').value === 'yejun' && document.getElementById('gmPassword').value === '1234321') {
+            sessionStorage.setItem('gmAuthenticated', 'true');
+            window.location.href = 'gm.html';
+        } else alert('인증 실패');
+    }
+
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     function openInfoModal() {
@@ -202,7 +248,7 @@
         document.getElementById('edit-avatar-prev').src = user.avatar_url || DEFAULT_AVATAR;
         openModal('info-modal');
     }
-    async function handleLogout() { await supabaseClient.auth.signOut(); location.href = "login.html"; }
+    async function handleLogout() { await supabaseClient.auth.signOut(); window.location.href = "login.html"; }
 
     init();
 </script>

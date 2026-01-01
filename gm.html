@@ -228,11 +228,16 @@
                         current_sword_lvl: lvl,
                         updated_at: new Date().toISOString()
                     })
-                    .eq('id', id)
-                    .select();
+                    .eq('id', id);
 
                 if (error) {
-                    console.error('Supabase 오류 상세:', error);
+                    console.error('Supabase 오류 상세:', {
+                        code: error.code,
+                        message: error.message,
+                        details: error.details,
+                        hint: error.hint,
+                        data: { id, gold, money, lvl }
+                    });
                     if (error.code === '22P02') {
                         throw new Error('잘못된 데이터 형식입니다. 숫자만 입력해주세요.');
                     }
@@ -246,85 +251,6 @@
                 console.error('업데이트 실패:', error);
                 const errorMessage = error.message || '데이터 저장 중 오류가 발생했습니다.';
                 showNotification(`오류: ${errorMessage}`, 'error');
-            }
-        }
-
-        // 7.1 재화 변환 함수
-        async function convertUserCurrency(userId) {
-            const amount = parseInt(document.getElementById(`convert-amount-${userId}`).value);
-            const direction = document.getElementById(`convert-from-${userId}`).value;
-            const resultDiv = document.getElementById(`convert-result-${userId}`);
-            
-            if (!amount || amount <= 0) {
-                resultDiv.textContent = '유효한 금액을 입력해주세요.';
-                resultDiv.style.color = '#dc3545';
-                resultDiv.style.display = 'block';
-                return;
-            }
-
-            try {
-                // 현재 사용자 재화 정보 가져오기
-                const { data: user, error: fetchError } = await client
-                    .from('profiles')
-                    .select('gold, money')
-                    .eq('id', userId)
-                    .single();
-
-                if (fetchError) throw fetchError;
-
-                let updateData = {};
-                let resultText = '';
-
-                if (direction === 'gold') {
-                    // GOLD → MONEY 변환
-                    const convertedAmount = amount * 100;
-                    updateData = {
-                        gold: user.gold - amount,
-                        money: user.money + convertedAmount
-                    };
-                    resultText = `${amount} GOLD → ${convertedAmount} MONEY로 변환되었습니다.`;
-                } else {
-                    // MONEY → GOLD 변환
-                    const requiredMoney = amount * 100;
-                    if (user.money < requiredMoney) {
-                        throw new Error(`변환에 필요한 MONEY가 부족합니다. (필요: ${requiredMoney} MONEY)`);
-                    }
-                    updateData = {
-                        gold: user.gold + amount,
-                        money: user.money - requiredMoney
-                    };
-                    resultText = `${requiredMoney} MONEY → ${amount} GOLD로 변환되었습니다.`;
-                }
-
-                // 데이터베이스 업데이트
-                const { error: updateError } = await client
-                    .from('profiles')
-                    .update(updateData)
-                    .eq('id', userId);
-
-                if (updateError) throw updateError;
-
-                // 성공 메시지 표시 및 UI 업데이트
-                resultDiv.textContent = resultText;
-                resultDiv.style.color = '#28a745';
-                resultDiv.style.display = 'block';
-
-                // 입력 필드 초기화
-                document.getElementById(`convert-amount-${userId}`).value = '';
-                
-                // 3초 후 메시지 숨기기
-                setTimeout(() => {
-                    resultDiv.style.display = 'none';
-                }, 3000);
-
-                // 사용자 목록 새로고침
-                loadUsers();
-
-            } catch (error) {
-                console.error('Currency conversion error:', error);
-                resultDiv.textContent = error.message || '재화 변환 중 오류가 발생했습니다.';
-                resultDiv.style.color = '#dc3545';
-                resultDiv.style.display = 'block';
             }
         }
 

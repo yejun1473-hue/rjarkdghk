@@ -3,7 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>codetbase - 고객센터</title>
+    
+    <title>Up Sword</title>
+    
+    <link rel="icon" href="https://i.ifh.cc/vXLMs6.jpg" type="image/x-icon">
+    <link rel="shortcut icon" href="https://i.ifh.cc/vXLMs6.jpg" type="image/x-icon">
+    
+    <meta property="og:title" content="Up Sword">
+    <meta property="og:image" content="https://i.ifh.cc/rvTcHw.jpg">
+    <meta property="og:description" content="자체 제작 강화게임 Up Sword">
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { background: #ccc; font-family: 'Pretendard', sans-serif; margin: 0; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; position: relative; }
@@ -96,7 +105,6 @@
     let currentType = "";
     let userNick = "익명";
 
-    // [추가] 로그인 체크 및 닉네임 가져오기
     async function checkAuth() {
         const { data: { session } } = await supabaseClient.auth.getSession();
         if(!session) { window.location.href="login.html"; return; }
@@ -118,7 +126,6 @@
             const content = document.getElementById('input-text').value;
             if(!content) return alert("내용을 입력해주세요.");
             
-            // [수정] nickname 컬럼에 현재 접속자 닉네임 저장
             const { error } = await supabaseClient.from('support_tickets').insert([
                 { type: currentType, content: content, nickname: userNick, created_at: new Date() }
             ]);
@@ -153,16 +160,14 @@
         if(error) return alert("데이터 로드 실패");
 
         const list = document.getElementById('admin-list');
-        // [수정] 어드민 목록에 작성자 닉네임 표시
         list.innerHTML = data.length === 0 ? "<p>내역이 없습니다.</p>" : data.map(item => `
-            <div class="report-item">
-                <span class="report-tag">[${item.type}] 작성자: ${item.nickname || '익명'} | ${new Date(item.created_at).toLocaleString()}</span>
-                <div style="font-size:16px; font-weight:bold;">${item.content}</div>
+            <div class=\"report-item\">
+                <span class=\"report-tag\">[${item.type}] 작성자: ${item.nickname || '익명'} | ${new Date(item.created_at).toLocaleString()}</span>
+                <div style=\"font-size:16px; font-weight:bold;\">${item.content}</div>
             </div>
         `).join('');
     }
 
-    // 실행 시 로그인 체크 시작
     checkAuth();
 </script>
 </body>

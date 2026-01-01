@@ -152,11 +152,25 @@
 </div>
 
 <script>
-    const SUPABASE_URL = 'https://utfrjzcnefsbuadnkdud.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZnJqemNuZWZzYnVhZG5rZHVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4MjE1MTYsImV4cCI6MjA4MjM5NzUxNn0.D3Za1nMw-x0JwOpkFuYceUHlagcpRdrpFqNUIP5Kjdc';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // 전역 변수 선언
+    let supabaseClient;
     const DEFAULT_AVATAR = "https://www.pngarts.com/files/10/Default-Profile-Picture-Download-PNG-Image.png";
     let user = null;
+    
+    // Supabase 초기화 함수
+    function initSupabase() {
+        const SUPABASE_URL = 'https://utfrjzcnefsbuadnkdud.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZnJqemNuZWZzYnVhZG5rZHVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4MjE1MTYsImV4cCI6MjA4MjM5NzUxNn0.D3Za1nMw-x0JwOpkFuYceUHlagcpRdrpFqNUIP5Kjdc';
+        
+        // supabase 객체가 로드되었는지 확인
+        if (typeof supabase === 'undefined') {
+            console.error('Supabase가 아직 로드되지 않았습니다.');
+            return false;
+        }
+        
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        return true;
+    }
 
     async function init() {
         const { data: { session } } = await supabaseClient.auth.getSession();
@@ -715,15 +729,19 @@
 
     // 사용자 정보 로드 및 배틀 시스템 초기화
     document.addEventListener('DOMContentLoaded', function() {
+        // Supabase 초기화 시도
+        if (!initSupabase()) {
+            console.error('Supabase 초기화에 실패했습니다.');
+            alert('시스템 초기화에 실패했습니다. 페이지를 새로고침 해주세요.');
+            return;
+        }
+
+        // 애플리케이션 초기화
         init().then(() => {
-            // Supabase 초기화가 완료된 후에만 사용자 정보 로드
-            if (supabaseClient) {
-                loadUserInfo();
-            } else {
-                console.error('Supabase 클라이언트가 초기화되지 않았습니다.');
-            }
+            loadUserInfo();
         }).catch(error => {
             console.error('초기화 중 오류 발생:', error);
+            alert('초기화 중 오류가 발생했습니다: ' + error.message);
         });
     });
 </script>

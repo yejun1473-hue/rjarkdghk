@@ -41,6 +41,15 @@
 
     let isJoinMode = false;
 
+    // [추가된 기능] 접속 시 이미 로그인되어 있는지 확인
+    async function checkLogin() {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+            // 이미 로그인된 세션이 있다면 index.html로 강제 이동
+            location.href = "index.html";
+        }
+    }
+
     function toggleMode() {
         isJoinMode = !isJoinMode;
         document.getElementById('nick').style.display = isJoinMode ? 'block' : 'none';
@@ -48,7 +57,6 @@
         document.getElementById('sub-btn').innerText = isJoinMode ? '로그인하러 가기' : '계정 만들기';
     }
 
-    // 닉네임 유효성 검사 (한글, 영문, 숫자만 허용)
     function validateNickname(nickname) {
         const regex = /^[a-zA-Z0-9가-힣]+$/;
         return regex.test(nickname);
@@ -65,12 +73,10 @@
         const userIdentifier = `${phone}@phone.game`;
 
         if (isJoinMode) {
-            // 1. 닉네임 기본 검사
             if(!nick) return alert("닉네임을 입력하세요.");
             if(nick.length > 15) return alert("닉네임은 최대 15자까지 가능합니다.");
             if(!validateNickname(nick)) return alert("닉네임에 공백이나 특수문자를 사용할 수 없습니다.");
 
-            // 2. 닉네임 중복 체크
             const { data: existingUser, error: checkError } = await supabaseClient
                 .from('profiles')
                 .select('nickname')
@@ -80,7 +86,6 @@
             if (checkError) return alert("데이터 확인 중 오류 발생");
             if (existingUser) return alert("이미 존재하는 닉네임입니다.");
 
-            // 3. 회원가입 진행
             const { data, error } = await supabaseClient.auth.signUp({ 
                 email: userIdentifier, 
                 password: pw 
@@ -88,7 +93,6 @@
 
             if (error) return alert("가입 실패: " + error.message);
 
-            // 4. 프로필 생성
             const { error: profileError } = await supabaseClient.from('profiles').insert([
                 { id: data.user.id, nickname: nick, gold: 10000, current_sword_lvl: 1 }
             ]);
@@ -106,6 +110,9 @@
             location.href = "index.html";
         }
     }
+
+    // 페이지가 열릴 때 로그인 체크 실행
+    checkLogin();
 </script>
 </body>
 </html>

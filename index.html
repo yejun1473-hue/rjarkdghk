@@ -455,7 +455,7 @@
     async function startBattle() {
         try {
             // 배틀 매칭 시작
-            const { data: battle, error } = await supabase
+            const { data: battle, error } = await supabaseClient
                 .from('battles')
                 .insert([
                     { 
@@ -500,7 +500,7 @@
         if (!currentBattle) return;
         
         try {
-            await supabase
+            await supabaseClient
                 .from('battles')
                 .delete()
                 .eq('id', currentBattle.id);

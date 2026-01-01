@@ -21,7 +21,8 @@
         .banner-item { width: 100%; height: 100%; }
         .banner-item img { width: 100%; height: 100%; display: block; object-fit: contain; background: #fff; }
         .bottom-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .menu-btn { background: #c2cfff; border: none; border-radius: 20px; padding: 15px; font-weight: 900; font-size: 20px; cursor: pointer; }
+        .menu-btn { background: #c2cfff; border: none; border-radius: 20px; padding: 15px; font-weight: 900; font-size: 20px; cursor: pointer; transition: all 0.3s ease; }
+        .menu-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; }
         .modal-content { background: white; width: 85%; max-width: 350px; border-radius: 25px; padding: 25px; position: relative; max-height: 90vh; overflow-y: auto; }
         .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; font-weight: bold; }
@@ -63,6 +64,7 @@
     </div>
 
     <div class="bottom-menu">
+        <button class="menu-btn" style="background: #ff6b6b;" onclick="startBattle()">배틀하기</button>
         <button class="menu-btn" onclick="location.href='chat.html'">고객센터</button>
         <button class="menu-btn" onclick="openInfoModal()">나의정보</button>
     </div>
@@ -94,6 +96,31 @@
         </div>
         <button class="btn-update" id="save-btn" onclick="saveMyInfo()">수정 내용 저장</button>
         <button class="btn-logout" onclick="handleLogout()">로그아웃</button>
+    </div>
+</div>
+
+<!-- 배틀 매칭 모달 -->
+<div id="battle-matching-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="cancelBattleMatching()">&times;</span>
+        <h2 style="text-align:center;">⚔️ 배틀 매칭 중...</h2>
+        <div id="matching-status" style="text-align:center; margin: 20px 0; font-size: 18px;">
+            상대방을 찾고 있습니다...
+        </div>
+        <div style="text-align:center;">
+            <button class="btn-update" onclick="cancelBattleMatching()" style="background: #e74c3c;">매칭 취소</button>
+        </div>
+    </div>
+</div>
+
+<!-- 배틀 결과 모달 -->
+<div id="battle-result-modal" class="modal">
+    <div class="modal-content">
+        <h2 style="text-align:center;" id="battle-result-title">⚔️ 배틀 결과</h2>
+        <div id="battle-result-content" style="text-align:center; margin: 20px 0; font-size: 18px;">
+            <!-- 결과가 여기에 표시됩니다 -->
+        </div>
+        <button class="btn-update" onclick="closeModal('battle-result-modal')" style="width:100%;">확인</button>
     </div>
 </div>
 
@@ -379,6 +406,144 @@
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     
+    // 배틀 관련 변수
+    let battleMatchingInterval = null;
+    let currentBattle = null;
+
+    // 배틀 시작 함수
+    function startBattle() {
+        openModal('battle-matching-modal');
+        document.getElementById('matching-status').textContent = '상대방을 찾고 있습니다...';
+        
+        // 랜덤한 대기 시간 (1~5초)
+        const matchTime = Math.floor(Math.random() * 4000) + 1000;
+        
+        // 매칭 시뮬레이션
+        battleMatchingInterval = setTimeout(() => {
+            findOpponent();
+        }, matchTime);
+    }
+
+    // 배틀 매칭 취소
+    function cancelBattleMatching() {
+        if (battleMatchingInterval) {
+            clearTimeout(battleMatchingInterval);
+            battleMatchingInterval = null;
+        }
+        closeModal('battle-matching-modal');
+    }
+
+    // 상대방 찾기
+    async function findOpponent() {
+        // 여기서는 간단한 랜덤 매칭 시뮬레이션
+        // 실제로는 서버에서 매칭 로직을 구현해야 함
+        const myNick = document.getElementById('u-nick').textContent;
+        const fakeOpponents = [
+            '용사123', '전사킹', '마법사왕', '궁수대장', '도적대마왕',
+            '불의전사', '물의마법사', '바람의궁수', '대지의기사', '번개의도적'
+        ];
+        
+        // 나를 제외한 상대방 선택
+        const availableOpponents = fakeOpponents.filter(name => name !== myNick);
+        const opponent = availableOpponents[Math.floor(Math.random() * availableOpponents.length)];
+        
+        // 배틀 결과 생성 (50% 확률로 승리)
+        const isWin = Math.random() > 0.5;
+        const winStreak = Math.floor(Math.random() * 10); // 연승 횟수 (0~9)
+        const goldEarned = 100 + (winStreak * 20); // 기본 100G + 연승당 20G 추가
+        
+        // 배틀 결과 저장
+        currentBattle = {
+            opponent,
+            isWin,
+            winStreak,
+            goldEarned
+        };
+        
+        // 매칭 완료 후 1초 후에 결과 표시
+        document.getElementById('matching-status').textContent = `상대를 찾았습니다: ${opponent}`;
+        
+        setTimeout(() => {
+            closeModal('battle-matching-modal');
+            showBattleResult();
+        }, 1000);
+    }
+    
+    // 배틀 결과 표시
+    async function showBattleResult() {
+        const { opponent, isWin, winStreak, goldEarned } = currentBattle;
+        const resultTitle = document.getElementById('battle-result-title');
+        const resultContent = document.getElementById('battle-result-content');
+        
+        if (isWin) {
+            resultTitle.textContent = '🎉 승리하셨습니다! 🎉';
+            resultContent.innerHTML = `
+                <p>축하합니다! <strong>${opponent}</strong>님을 상대로 승리하셨습니다!</p>
+                <p>연승: ${winStreak}연승</p>
+                <p style="color: #f39c12; font-weight: bold; font-size: 24px;">+${goldEarned}G 획득!</p>
+            `;
+            
+            // 골드 업데이트
+            const currentGold = parseInt(document.getElementById('u-gold').textContent) || 0;
+            document.getElementById('u-gold').textContent = currentGold + goldEarned;
+            
+            // 여기서 서버에 골드 업데이트 요청을 보내야 함
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data: profile, error } = await supabase
+                        .from('profiles')
+                        .select('gold')
+                        .eq('id', user.id)
+                        .single();
+                    
+                    if (!error && profile) {
+                        await supabase
+                            .from('profiles')
+                            .update({ gold: (profile.gold || 0) + goldEarned })
+                            .eq('id', user.id);
+                    }
+                }
+            } catch (error) {
+                console.error('골드 업데이트 실패:', error);
+            }
+        } else {
+            resultTitle.textContent = '😢 아쉽게 졌습니다...';
+            resultContent.innerHTML = `
+                <p><strong>${opponent}</strong>님에게 패배하셨습니다...</p>
+                <p>다음엔 꼭 이기세요!</p>
+                <p>위로의 상금: 10G</p>
+            `;
+            
+            // 패배 보상 (기본 10G)
+            const currentGold = parseInt(document.getElementById('u-gold').textContent) || 0;
+            document.getElementById('u-gold').textContent = currentGold + 10;
+            
+            // 서버에 골드 업데이트 요청
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data: profile, error } = await supabase
+                        .from('profiles')
+                        .select('gold')
+                        .eq('id', user.id)
+                        .single();
+                    
+                    if (!error && profile) {
+                        await supabase
+                            .from('profiles')
+                            .update({ gold: (profile.gold || 0) + 10 })
+                            .eq('id', user.id);
+                    }
+                }
+            } catch (error) {
+                console.error('골드 업데이트 실패:', error);
+            }
+        }
+        
+        openModal('battle-result-modal');
+    }
+
     init();
 </script>
 </body>

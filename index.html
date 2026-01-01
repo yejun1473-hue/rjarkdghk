@@ -3,7 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>codetbase - 홈</title>
+    
+    <title>Up Sword</title>
+    
+    <link rel="icon" href="https://i.ifh.cc/vXLMs6.jpg" type="image/x-icon">
+    <link rel="shortcut icon" href="https://i.ifh.cc/vXLMs6.jpg" type="image/x-icon">
+    
+    <meta property="og:title" content="Up Sword">
+    <meta property="og:image" content="https://i.ifh.cc/rvTcHw.jpg">
+    <meta property="og:description" content="자체 제작 강화게임 Up Sword">
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { background: #f0f0f0; font-family: 'Pretendard', sans-serif; margin: 0; padding: 20px 0; display: flex; flex-direction: column; align-items: center; }
@@ -156,7 +165,7 @@
         document.getElementById('u-avatar').src = user.avatar_url || DEFAULT_AVATAR;
     }
 
-    // 내 정보 저장 로직 (이 부분이 정상 작동해야 수정이 됨)
+    // 내 정보 저장 로직 복구
     async function saveMyInfo() {
         const btn = document.getElementById('save-btn');
         btn.innerText = "저장 중...";

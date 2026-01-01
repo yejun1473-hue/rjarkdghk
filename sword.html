@@ -125,13 +125,22 @@
     }
 
     function getSellPrice(level) {
-        // Calculate sell price based on level
-        if (level === 20) return 10000000; // 10,000,000G for level 20
-        
-        const cube = level * level * level;
-        if (level >= 15) return cube * 200;
-        if (level >= 10) return cube * 100;
-        return cube * 50;
+        // Calculate sell price based on level and add 10% bonus
+        let basePrice;
+        if (level === 20) {
+            basePrice = 10000000; // 10,000,000G for level 20
+        } else {
+            const cube = level * level * level;
+            if (level >= 15) {
+                basePrice = cube * 200;
+            } else if (level >= 10) {
+                basePrice = cube * 100;
+            } else {
+                basePrice = cube * 50;
+            }
+        }
+        // Add 10% bonus to the base price
+        return Math.floor(basePrice * 1.1);
     }
 
     function updateUI() {
@@ -292,6 +301,22 @@
             { success: 5, maintain: 0, drop: 45, destroy: 50 },   // 18 → 19
             { success: 1, maintain: 0, drop: 49, destroy: 50 }    // 19 → 20
         ];
+        
+        // For level 0 to 1, ensure no destroy or drop
+        if (level === 0) {
+            return { success: 95, maintain: 5, drop: 0, destroy: 0 };
+        }
+        
+        // For level 1 to 2, ensure no destroy
+        if (level === 1) {
+            return { 
+                success: 90, 
+                maintain: 10, 
+                drop: 0, 
+                destroy: 0 
+            };
+        }
+        
         return rates[level] || { success: 0, maintain: 0, drop: 0, destroy: 0 };
     }
     

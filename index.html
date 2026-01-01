@@ -194,10 +194,31 @@
     async function handleDailyCheck() {
         const today = new Date().toLocaleDateString();
         const lastCheck = localStorage.getItem(`daily_chk_${user.id}`);
-        if(lastCheck === today) return alert("이미 오늘 출석하셨습니다.");
+        const lastCheckDate = localStorage.getItem(`last_check_date_${user.id}`);
+        let streak = parseInt(localStorage.getItem(`checkin_streak_${user.id}`)) || 0;
         
-        const reward = parseInt(localStorage.getItem('codet_daily')) || 5000;
-        const newGold = (parseInt(user.gold) || 0) + reward;
+        // Reset streak if it's a new day after missing a day
+        if (lastCheckDate && lastCheckDate !== today) {
+            const oneDay = 24 * 60 * 60 * 1000; // hours*minutes*seconds*milliseconds
+            const lastDate = new Date(lastCheckDate);
+            const todayDate = new Date(today);
+            const diffDays = Math.round(Math.abs((todayDate - lastDate) / oneDay));
+            
+            if (diffDays > 1) {
+                streak = 0; // Reset streak if more than 1 day has passed
+            }
+        }
+        
+        if (lastCheck === today) return alert("이미 오늘 출석하셨습니다.");
+        
+        // Increment streak and check for 7-day bonus
+        streak = (streak % 7) + 1;
+        const is7thDay = (streak % 7 === 0);
+        const baseReward = 10000; // 10,000G base reward
+        const bonusReward = is7thDay ? 25000 : 0; // 25,000G bonus every 7th day
+        const totalReward = baseReward + bonusReward;
+        
+        const newGold = (parseInt(user.gold) || 0) + totalReward;
         user.gold = newGold;
         
         const { error } = await supabaseClient.from('profiles').update({ gold: newGold }).eq('id', user.id);
@@ -205,7 +226,14 @@
             alert("출석 실패: " + error.message); 
         } else {
             localStorage.setItem(`daily_chk_${user.id}`, today);
-            alert(`${reward.toLocaleString()}G 출석 완료!`);
+            localStorage.setItem(`last_check_date_${user.id}`, today);
+            localStorage.setItem(`checkin_streak_${user.id}`, streak);
+            
+            let message = `${baseReward.toLocaleString()}G 출석 완료!`;
+            if (is7thDay) {
+                message = `축하합니다! 7일 연속 출석 보너스 ${totalReward.toLocaleString()}G 지급!`;
+            }
+            alert(message);
             updateUI();
         }
     }

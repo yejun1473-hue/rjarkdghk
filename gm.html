@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GM 패널 - 검강화 게임</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', sans-serif;
+        }
+        
+        body {
+            background: #f0f2f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            margin: 0;
+        }
+        
+        .search-box {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .user-list {
+            overflow-y: auto;
+            max-height: 70vh;
+        }
+        
+        .user-card {
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .user-info {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .user-email {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-top: 3px;
+        }
+        
+        .user-stats {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-box {
+            min-width: 120px;
+        }
+        
+        .stat-label {
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-bottom: 3px;
+        }
+        
+        .stat-value {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        input[type="number"] {
+            width: 80px;
+            padding: 5px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .btn {
+            padding: 5px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .btn-save {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .btn-save:hover {
+            background-color: #218838;
+        }
+        
+        .btn-ban {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .btn-ban:hover {
+            background-color: #c82333;
+        }
+        
+        .banned {
+            background-color: #fff3cd;
+        }
+        
+        .gold { color: #f1c40f; }
+        .money { color: #9b59b6; }
+        
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-left: auto;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: 600;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .success { background-color: #28a745; }
+        .error { background-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-shield-alt"></i> GM 관리자 패널</h1>
+            <div>
+                <button id="logoutBtn" class="btn btn-ban">로그아웃</button>
+            </div>
+        </div>
+        
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="이메일 또는 닉네임으로 검색...">
+        </div>
+        
+        <div class="user-list" id="userList">
+            <!-- 사용자 목록이 여기에 동적으로 로드됩니다 -->
+            <div style="padding: 20px; text-align: center; color: #6c757d;">
+                사용자 목록을 불러오는 중입니다...
+            </div>
+        </div>
+    </div>
+    
+    <div id="notification" class="notification"></div>
+    
+    <script>
+        const SUPABASE_URL = 'https://utfrjzcnefsbuadnkdud.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZnJqemNuZWZzYnVhZG5rZHVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4MjE1MTYsImV4cCI6MjA4MjM5NzUxNn0.D3Za1nMw-x0JwOpkFuYceUHlagcpRdrpFqNUIP5Kjdc';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        let currentUser = null;
+        let allUsers = [];
+        
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 세션 확인
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            // 현재 사용자 정보 가져오기
+            const { data: userData } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+                
+            currentUser = userData;
+            
+            // 관리자 권한 확인 (이메일로 임시 확인)
+            if (userData.email !== 'admin@example.com') {
+                alert('권한이 없습니다.');
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            // 이벤트 리스너 등록
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            document.getElementById('searchInput').addEventListener('input', filterUsers);
+            
+            // 사용자 목록 로드
+            loadUsers();
+        });
+        
+        async function loadUsers() {
+            const { data: users, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .order('created_at', { ascending: false });
+                
+            if (error) {
+                showNotification('사용자 목록을 불러오는 중 오류가 발생했습니다.', 'error');
+                console.error('Error loading users:', error);
+                return;
+            }
+            
+            allUsers = users;
+            renderUsers(users);
+        }
+        
+        function renderUsers(users) {
+            const userList = document.getElementById('userList');
+            
+            if (!users || users.length === 0) {
+                userList.innerHTML = '<div style="padding: 20px; text-align: center; color: #6c757d;">사용자가 없습니다.</div>';
+                return;
+            }
+            
+            userList.innerHTML = users.map(user => `
+                <div class="user-card ${user.is_banned ? 'banned' : ''}" data-id="${user.id}">
+                    <div class="user-info">
+                        <div class="user-name">
+                            ${user.username || '이름 없음'} 
+                            ${user.is_banned ? '<span style="color: #dc3545; font-size: 0.8em;">(정지됨)</span>' : ''}
+                        </div>
+                        <div class="user-email">${user.email}</div>
+                    </div>
+                    
+                    <div class="user-stats">
+                        <div class="stat-box">
+                            <div class="stat-label">골드 (G)</div>
+                            <div class="stat-value">
+                                <i class="fas fa-coins gold"></i>
+                                <input type="number" value="${user.gold || 0}" min="0" id="gold-${user.id}">
+                            </div>
+                        </div>
+                        
+                        <div class="stat-box">
+                            <div class="stat-label">머니 (M)</div>
+                            <div class="stat-value">
+                                <i class="fas fa-wallet money"></i>
+                                <input type="number" value="${user.money || 0}" min="0" id="money-${user.id}">
+                            </div>
+                        </div>
+                        
+                        <div class="stat-box">
+                            <div class="stat-label">검 레벨</div>
+                            <div class="stat-value">
+                                <i class="fas fa-sword"></i>
+                                <input type="number" value="${user.current_sword_lvl || 1}" min="1" max="20" id="level-${user.id}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="actions">
+                        <button class="btn btn-save" onclick="saveUserChanges('${user.id}')">
+                            <i class="fas fa-save"></i> 저장
+                        </button>
+                        <button class="btn ${user.is_banned ? 'btn-save' : 'btn-ban'}" onclick="toggleBan('${user.id}', ${!user.is_banned})">
+                            <i class="fas ${user.is_banned ? 'fa-unlock' : 'fa-ban'}"></i>
+                            ${user.is_banned ? '정지 해제' : '정지'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function filterUsers() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            if (!searchTerm.trim()) {
+                renderUsers(allUsers);
+                return;
+            }
+            
+            const filtered = allUsers.filter(user => 
+                (user.email && user.email.toLowerCase().includes(searchTerm)) ||
+                (user.username && user.username.toLowerCase().includes(searchTerm))
+            );
+            
+            renderUsers(filtered);
+        }
+        
+        async function saveUserChanges(userId) {
+            const gold = parseInt(document.getElementById(`gold-${userId}`).value) || 0;
+            const money = parseInt(document.getElementById(`money-${userId}`).value) || 0;
+            let level = parseInt(document.getElementById(`level-${userId}`).value) || 1;
+            
+            // 최대 레벨 제한 (20)
+            level = Math.min(level, 20);
+            
+            try {
+                const { error } = await supabase
+                    .from('profiles')
+                    .update({ 
+                        gold: Math.max(0, gold),
+                        money: Math.max(0, money),
+                        current_sword_lvl: level 
+                    })
+                    .eq('id', userId);
+                    
+                if (error) throw error;
+                
+                // 로컬 데이터 업데이트
+                const userIndex = allUsers.findIndex(u => u.id === userId);
+                if (userIndex !== -1) {
+                    allUsers[userIndex].gold = gold;
+                    allUsers[userIndex].money = money;
+                    allUsers[userIndex].current_sword_lvl = level;
+                }
+                
+                showNotification('성공적으로 저장되었습니다!', 'success');
+            } catch (error) {
+                console.error('Error updating user:', error);
+                showNotification('저장 중 오류가 발생했습니다.', 'error');
+            }
+        }
+        
+        async function toggleBan(userId, banStatus) {
+            if (!confirm(`${banStatus ? '이 사용자를 정지하시겠습니까?' : '이 사용자의 정지를 해제하시겠습니까?'}`)) {
+                return;
+            }
+            
+            try {
+                const { error } = await supabase
+                    .from('profiles')
+                    .update({ is_banned: banStatus })
+                    .eq('id', userId);
+                    
+                if (error) throw error;
+                
+                // 로컬 데이터 업데이트
+                const userIndex = allUsers.findIndex(u => u.id === userId);
+                if (userIndex !== -1) {
+                    allUsers[userIndex].is_banned = banStatus;
+                }
+                
+                // UI 업데이트
+                const userCard = document.querySelector(`.user-card[data-id="${userId}"]`);
+                if (userCard) {
+                    if (banStatus) {
+                        userCard.classList.add('banned');
+                    } else {
+                        userCard.classList.remove('banned');
+                    }
+                    
+                    // 버튼 텍스트 업데이트
+                    const banBtn = userCard.querySelector('.btn-ban, .btn-save');
+                    if (banBtn) {
+                        banBtn.innerHTML = `<i class="fas ${banStatus ? 'fa-unlock' : 'fa-ban'}"></i> ${banStatus ? '정지 해제' : '정지'}`;
+                        banBtn.className = `btn ${banStatus ? 'btn-save' : 'btn-ban'}`;
+                    }
+                    
+                    // 상태 표시 업데이트
+                    const statusSpan = userCard.querySelector('.user-name span');
+                    if (statusSpan) {
+                        statusSpan.textContent = banStatus ? '(정지됨)' : '';
+                    } else if (banStatus) {
+                        const nameDiv = userCard.querySelector('.user-name');
+                        if (nameDiv) {
+                            nameDiv.innerHTML += ' <span style="color: #dc3545; font-size: 0.8em;">(정지됨)</span>';
+                        }
+                    }
+                }
+                
+                showNotification(`사용자가 성공적으로 ${banStatus ? '정지' : '정지 해제'}되었습니다.`, 'success');
+            } catch (error) {
+                console.error('Error toggling ban status:', error);
+                showNotification('처리 중 오류가 발생했습니다.', 'error');
+            }
+        }
+        
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        async function handleLogout() {
+            await supabase.auth.signOut();
+            window.location.href = 'login.html';
+        }
+        
+        // 전역 함수로 노출
+        window.saveUserChanges = saveUserChanges;
+        window.toggleBan = toggleBan;
+    </script>
+</body>
+</html>

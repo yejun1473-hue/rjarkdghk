@@ -600,7 +600,7 @@
                             const loserId = winnerId === myId ? currentBattle.opponentId : myId;
                             
                             // 패자 정보 가져오기
-                            const { data: loserProfile } = await supabase
+                            const { data: loserProfile } = await supabaseClient
                                 .from('profiles')
                                 .select('money, nickname')
                                 .eq('id', loserId)
@@ -611,7 +611,7 @@
                                 
                                 // 패자 돈 차감 (0 이하로는 내려가지 않음)
                                 const newLoserMoney = Math.max(0, (parseInt(loserProfile.money) || 0) - moneyToLose);
-                                await supabase
+                                await supabaseClient
                                     .from('profiles')
                                     .update({ money: newLoserMoney })
                                     .eq('id', loserId);
@@ -622,7 +622,7 @@
                                     document.getElementById('u-money').textContent = currentMoney + moneyToLose;
                                     
                                     // 서버에도 승자 돈 업데이트
-                                    await supabase.rpc('increment_money', {
+                                    await supabaseClient.rpc('increment_money', {
                                         user_id: myId,
                                         amount: moneyToLose
                                     });
@@ -660,16 +660,16 @@
     // 골드 업데이트
     async function updateGold(amount) {
         try {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user } } = await supabaseClient.auth.getUser();
             if (user) {
-                const { data: profile } = await supabase
+                const { data: profile } = await supabaseClient
                     .from('profiles')
                     .select('gold')
                     .eq('id', user.id)
                     .single();
                 
                 if (profile) {
-                    await supabase
+                    await supabaseClient
                         .from('profiles')
                         .update({ gold: (parseInt(profile.gold) || 0) + amount })
                         .eq('id', user.id);

@@ -7,230 +7,56 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* 폰트 및 기본 배경 */
+        /* Pretendard 폰트 및 기본 테마 설정 */
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body { background: #f4f7f6; font-family: 'Pretendard', sans-serif; margin: 0; padding: 20px 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         
-        body { 
-            background: #e6e9ed; 
-            font-family: 'Pretendard', sans-serif; 
-            margin: 0; 
-            padding: 20px 10px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            min-height: 100vh;
-        }
-
-        /* 게임 컨테이너 디자인 */
-        .game-container { 
-            width: 100%; 
-            max-width: 400px; 
-            background: white; 
-            border-radius: 30px; 
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15); 
-            overflow: hidden; 
-            display: none; /* 초기 로딩 전 숨김 */
-            position: relative;
-        }
-
-        /* 로딩 화면 */
-        #loading { 
-            padding: 100px 0; 
-            font-weight: bold; 
-            color: #2c3e50; 
-            font-size: 1.2rem;
-        }
-
-        /* 상단 헤더 */
-        .header { 
-            background: #2c3e50; 
-            color: white; 
-            padding: 15px 20px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-        }
-
-        .left-group { display: flex; align-items: center; gap: 12px; }
+        /* 컨테이너 디자인 */
+        .game-container { width: 100%; max-width: 420px; background: white; border-radius: 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; display: none; }
+        .header { background: #1a202c; color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
         
-        .home-btn { 
-            background: rgba(255,255,255,0.15); 
-            border: none; 
-            color: white; 
-            width: 38px; 
-            height: 38px; 
-            border-radius: 12px; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            transition: 0.3s; 
-        }
-        .home-btn:hover { background: rgba(255,255,255,0.3); transform: scale(1.05); }
-
-        .gold-wrap { display: flex; align-items: center; gap: 10px; position: relative; }
-        .code-btn { 
-            background: #f1c40f; 
-            border: none; 
-            padding: 6px 10px; 
-            border-radius: 8px; 
-            font-size: 11px; 
-            font-weight: 800; 
-            cursor: pointer; 
-            color: #2c3e50;
-            box-shadow: 0 4px 0 #d4ac0d;
-        }
-        .code-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #d4ac0d; }
-
-        /* NPC 대화창 */
-        .npc-box {
-            padding: 15px 20px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #eee;
-            font-size: 14px;
-            line-height: 1.4;
-        }
-        .npc-box b { color: #3498db; }
-
         /* 검 이미지 영역 */
-        .img-area { 
-            background: radial-gradient(circle, #ffffff 0%, #f0f2f5 100%);
-            height: 240px; 
-            margin: 20px; 
-            border-radius: 25px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
-            position: relative;
-        }
-        .sword-img { 
-            max-width: 80%; 
-            max-height: 80%; 
-            object-fit: contain; 
-            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1));
-            transition: transform 0.1s;
-        }
-
-        /* 검 정보 텍스트 */
-        .info-area { padding: 0 25px 20px; text-align: center; }
-        #s-name { font-size: 22px; font-weight: 800; color: #2c3e50; margin-bottom: 8px; }
-        #s-desc { font-size: 13px; color: #7f8c8d; margin-bottom: 15px; min-height: 18px; }
-        .stats-badge {
-            background: #edf2f7;
-            padding: 10px;
-            border-radius: 15px;
-            display: flex;
-            justify-content: space-around;
-            font-size: 12px;
-            font-weight: 600;
-            color: #4a5568;
-        }
-
-        /* 하단 버튼 */
-        .btn-group { padding: 20px; display: flex; gap: 10px; background: #fff; }
-        .btn-main { 
-            flex: 2; 
-            padding: 18px; 
-            border-radius: 15px; 
-            border: none; 
-            font-weight: 800; 
-            font-size: 17px; 
-            cursor: pointer; 
-            background: #34495e; 
-            color: white; 
-            box-shadow: 0 6px 0 #243342;
-            transition: 0.1s;
-        }
-        .btn-main:active { transform: translateY(3px); box-shadow: 0 3px 0 #243342; }
+        .img-area { background: #edf2f7; height: 260px; margin: 20px; border-radius: 20px; display: flex; align-items: center; justify-content: center; position: relative; }
+        .sword-img { max-width: 80%; max-height: 80%; object-fit: contain; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.15)); transition: transform 0.1s; }
         
-        .btn-sub { 
-            flex: 1; 
-            padding: 18px; 
-            border-radius: 15px; 
-            border: 2px solid #edf2f7; 
-            font-weight: 700; 
-            background: #f8f9fa; 
-            color: #718096;
-            cursor: pointer; 
-        }
+        /* 강화 정보 영역 */
+        .info-area { padding: 0 24px 24px; text-align: center; }
+        #s-name { font-size: 24px; font-weight: 800; color: #2d3748; }
+        #s-desc { font-size: 14px; color: #718096; margin: 8px 0 20px; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; background: #f8fafc; padding: 12px; border-radius: 16px; font-size: 13px; font-weight: 600; }
+        
+        /* 버튼 스타일 */
+        .btn-group { padding: 0 20px 24px; display: flex; gap: 12px; }
+        .btn-main { flex: 2; padding: 18px; border-radius: 16px; border: none; background: #2d3748; color: white; font-weight: 800; font-size: 18px; cursor: pointer; box-shadow: 0 4px 0 #1a202c; }
+        .btn-main:active { transform: translateY(2px); box-shadow: 0 2px 0 #1a202c; }
+        .btn-sub { flex: 1; padding: 18px; border-radius: 16px; border: 2px solid #e2e8f0; background: white; color: #4a5568; font-weight: 700; cursor: pointer; }
 
-        /* 효과 애니메이션 */
-        .hammering { animation: hammer 0.15s infinite; }
-        @keyframes hammer { 
-            0% { transform: scale(1) rotate(0deg); } 
-            50% { transform: scale(1.1) rotate(2deg); } 
-            100% { transform: scale(1) rotate(0deg); } 
-        }
-
-        .money-float { 
-            position: absolute; right: 20px; top: -20px; 
-            font-weight: 900; font-size: 24px; 
-            animation: floatUp 2s forwards; pointer-events: none; z-index: 100; 
-        }
-        @keyframes floatUp { 
-            0% { opacity: 0; transform: translateY(0); } 
-            20% { opacity: 1; } 
-            100% { opacity: 0; transform: translateY(-100px); } 
-        }
-
-        #full-effect { 
-            position: fixed; top:0; left:0; width:100%; height:100%; 
-            z-index: 9999; display: none; align-items: center; justify-content: center; 
-            font-size: 45px; font-weight: 900; color: white; pointer-events: none; 
-            text-align: center; text-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            white-space: pre-line;
-        }
-
-        #ban-overlay { 
-            position: fixed; top:0; left:0; width:100%; height:100%; 
-            background: rgba(0,0,0,0.9); color: white; display: none; 
-            flex-direction: column; align-items: center; justify-content: center; 
-            z-index: 10000; text-align: center; 
-        }
+        /* 애니메이션 효과 */
+        .hammering { animation: shake 0.15s infinite; }
+        @keyframes shake { 0% { transform: rotate(0); } 50% { transform: rotate(3deg); } 100% { transform: rotate(0); } }
+        #full-effect { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; color: white; font-size: 40px; font-weight: 900; pointer-events: none; text-shadow: 0 4px 10px rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
 
-<div id="loading">데이터를 불러오고 있습니다...</div>
-
-<div id="ban-overlay">
-    <i class="fa-solid fa-circle-exclamation" style="font-size: 60px; color: #e74c3c; margin-bottom: 20px;"></i>
-    <h2>접속이 제한되었습니다.</h2>
-    <p>관리자에게 문의해 주세요.</p>
-</div>
-
+<div id="loading" style="margin-top: 50px;">데이터를 동기화 중입니다...</div>
 <div id="full-effect"></div>
 
 <div class="game-container" id="game-ui">
     <div class="header">
-        <div class="left-group">
-            <button class="home-btn" onclick="location.href='index.html'">
-                <i class="fa-solid fa-house"></i>
-            </button>
-            <span id="u-nick" style="font-weight: 700;">...님</span>
-        </div>
-        <div class="gold-wrap" id="gold-anchor">
-            <span id="u-gold" style="color: #f1c40f; font-weight: 800; font-size: 18px;">0G</span>
-            <button class="code-btn" onclick="redeem()">코드</button>
-        </div>
+        <button onclick="location.href='index.html'" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;"><i class="fa-solid fa-house"></i></button>
+        <div id="u-gold" style="color:#ecc94b; font-weight:800; font-size:18px;">0G</div>
     </div>
 
-    <div class="npc-box">
-        <b>루돌프 : </b> <span id="npc-text">반갑네! 오늘은 어떤 검을 강화해볼 텐가?</span>
-    </div>
-    
-    <div class="img-area">
-        <img id="s-img" src="" class="sword-img">
-    </div>
-    
+    <div class="img-area"><img id="s-img" src="" class="sword-img"></div>
+
     <div class="info-area">
-        <div id="s-name">...</div>
-        <div id="s-desc">...</div>
-        <div class="stats-badge">
-            <span><i class="fa-solid fa-hammer"></i> 강화: <span id="stat-cost">0</span>G</span>
-            <span><i class="fa-solid fa-sack-dollar"></i> 판매: <span id="stat-sell">0</span>G</span>
-            <span><i class="fa-solid fa-percent"></i> 확률: <span id="stat-rate">0</span>%</span>
+        <div id="s-name">검 정보</div>
+        <div id="s-desc">검 설명</div>
+        <div class="stats-grid">
+            <div><i class="fa-solid fa-hammer"></i> <span id="stat-cost">0</span>G</div>
+            <div><i class="fa-solid fa-sack-dollar"></i> <span id="stat-sell">0</span>G</div>
+            <div><i class="fa-solid fa-percent"></i> <span id="stat-rate">0</span>%</div>
         </div>
     </div>
 
@@ -241,64 +67,41 @@
 </div>
 
 <script>
-    // --- 설정부 ---
     const SUPABASE_URL = 'https://utfrjzcnefsbuadnkdud.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZnJqemNuZWZzYnVhZG5rZHVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4MjE1MTYsImV4cCI6MjA4MjM5NzUxNn0.D3Za1nMw-x0JwOpkFuYceUHlagcpRdrpFqNUIP5Kjdc';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     
     let user = null;
-    let swords = {}; 
+    let swords = {};
 
-    const fallbackSwords = {
-        1: { level: 1, name: "낡은 목검", description: "평범한 연습용 목검입니다.", upgrade_cost: 100, sell_price: 0, success_rate: 0.9, image_url: "https://via.placeholder.com/200?text=Sword+1" }
-    };
-
-    // --- 초기화 ---
     async function init() {
         try {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session) { location.href = "login.html"; return; }
 
-            const { data: p, error: pErr } = await supabaseClient.from('profiles').select('*').eq('id', session.user.id).single();
-            if (pErr) throw pErr;
-            if (p.is_banned) {
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('ban-overlay').style.display = 'flex';
-                return;
-            }
+            const { data: p } = await supabaseClient.from('profiles').select('*').eq('id', session.user.id).single();
             user = p;
 
-            // 레벨 0 보정 로직
+            // Level 0 방어 로직
             if (!user.current_sword_lvl || user.current_sword_lvl < 1) {
                 user.current_sword_lvl = 1;
                 await supabaseClient.from('profiles').update({ current_sword_lvl: 1 }).eq('id', user.id);
             }
 
-            const { data: sData } = await supabaseClient.from('sword_data').select('*').order('level', { ascending: true });
-            if (sData && sData.length > 0) {
-                sData.forEach(item => { swords[item.level] = item; });
-            } else {
-                swords = { ...fallbackSwords };
-            }
+            const { data: sData } = await supabaseClient.from('sword_data').select('*').order('level');
+            sData.forEach(d => swords[d.level] = d);
 
             document.getElementById('loading').style.display = 'none';
             document.getElementById('game-ui').style.display = 'block';
             updateUI();
-
-        } catch (e) {
-            console.error(e);
-            alert("게임을 불러오는 데 실패했습니다.");
-        }
+        } catch (e) { alert("로그인이 만료되었거나 데이터 오류가 발생했습니다."); }
     }
 
     function updateUI() {
-        if (!user) return;
-        let item = swords[user.current_sword_lvl] || swords[1] || fallbackSwords[1];
-
-        document.getElementById('u-nick').innerText = (user.nickname || "여행자") + "님";
+        const item = swords[user.current_sword_lvl] || swords[1];
         document.getElementById('u-gold').innerText = user.gold.toLocaleString() + "G";
         document.getElementById('s-name').innerText = `[+${item.level}] ${item.name}`;
-        document.getElementById('s-desc').innerText = item.description || "설명이 없습니다.";
+        document.getElementById('s-desc').innerText = item.description;
         document.getElementById('stat-cost').innerText = item.upgrade_cost.toLocaleString();
         document.getElementById('stat-sell').innerText = (item.sell_price || 0).toLocaleString();
         document.getElementById('stat-rate').innerText = Math.round(item.success_rate * 100);
@@ -306,75 +109,49 @@
     }
 
     async function handleUpgrade() {
-        const currentItem = swords[user.current_sword_lvl] || swords[1];
-        if (user.gold < currentItem.upgrade_cost) return alert("골드가 부족합니다!");
+        const current = swords[user.current_sword_lvl];
+        if (user.gold < current.upgrade_cost) return alert("골드가 부족합니다!");
 
         const img = document.getElementById('s-img');
         img.classList.add('hammering');
-        showGoldEffect(currentItem.upgrade_cost, false);
 
-        const isSuccess = Math.random() < currentItem.success_rate;
-        let nextLvl = isSuccess ? user.current_sword_lvl + 1 : Math.max(1, user.current_sword_lvl - 1);
+        const success = Math.random() < current.success_rate;
+        // 실패 시 1레벨 미만으로 떨어지지 않게 고정
+        let nextLvl = success ? user.current_sword_lvl + 1 : Math.max(1, user.current_sword_lvl - 1);
 
-        if (isSuccess && !swords[nextLvl]) {
+        if (success && !swords[nextLvl]) {
             img.classList.remove('hammering');
-            return alert("이미 신의 경지에 도달한 검입니다!");
+            return alert("이미 신화적인 경지에 도달했습니다!");
         }
 
-        user.gold -= currentItem.upgrade_cost;
+        user.gold -= current.upgrade_cost;
         const { error } = await supabaseClient.from('profiles').update({ gold: user.gold, current_sword_lvl: nextLvl }).eq('id', user.id);
-
-        if (error) return alert("통신 중 오류가 발생했습니다.");
 
         setTimeout(() => {
             img.classList.remove('hammering');
             user.current_sword_lvl = nextLvl;
-            showEffect(isSuccess);
+            showEffect(success);
             updateUI();
         }, 600);
     }
 
     async function handleSell() {
         if (user.current_sword_lvl === 1) return alert("기본 검은 판매할 수 없습니다.");
-        const item = swords[user.current_sword_lvl];
-        const price = item.sell_price || 0;
-
-        if (!confirm(`${item.name}을 ${price.toLocaleString()}G에 파시겠습니까?`)) return;
+        const price = swords[user.current_sword_lvl].sell_price || 0;
+        if (!confirm(`${price}G에 판매하시겠습니까?`)) return;
 
         user.gold += price;
         user.current_sword_lvl = 1;
         await supabaseClient.from('profiles').update({ gold: user.gold, current_sword_lvl: 1 }).eq('id', user.id);
-
-        showGoldEffect(price, true);
         updateUI();
     }
 
-    function showEffect(success) {
+    function showEffect(win) {
         const el = document.getElementById('full-effect');
         el.style.display = 'flex';
-        el.style.backgroundColor = success ? 'rgba(46, 204, 113, 0.85)' : 'rgba(231, 76, 60, 0.85)';
-        el.innerText = success ? "🔨 강화 성공!!" : "💥 강화 실패!\n레벨 하락";
-        setTimeout(() => { el.style.display = 'none'; }, 800);
-    }
-
-    function showGoldEffect(amt, isPlus) {
-        const el = document.createElement('div');
-        el.className = 'money-float';
-        el.style.color = isPlus ? '#2ecc71' : '#e74c3c';
-        el.innerText = (isPlus ? '+' : '-') + Math.abs(amt).toLocaleString() + 'G';
-        document.getElementById('gold-anchor').appendChild(el);
-        setTimeout(() => el.remove(), 2000);
-    }
-
-    async function redeem() {
-        const code = prompt("보물 코드를 입력하세요.");
-        if (!code) return;
-        const { data } = await supabaseClient.from('reward_codes').select('*').eq('code', code).single();
-        if (!data) return alert("잘못된 코드입니다.");
-        user.gold += data.reward_gold;
-        await supabaseClient.from('profiles').update({ gold: user.gold }).eq('id', user.id);
-        showGoldEffect(data.reward_gold, true);
-        updateUI();
+        el.style.backgroundColor = win ? 'rgba(72, 187, 120, 0.9)' : 'rgba(245, 101, 101, 0.9)';
+        el.innerText = win ? "강화 성공!" : "강화 실패...";
+        setTimeout(() => el.style.display = 'none', 800);
     }
 
     init();

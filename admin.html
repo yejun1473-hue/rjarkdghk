@@ -6,14 +6,14 @@
     <title>검 강화 게임 Admin - 통합 관리</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 기존 스타일 유지 */
         body { font-family: 'Pretendard', sans-serif; background: #f0f2f5; margin: 0; padding-top: 80px; display: none; }
         .header { position: fixed; top: 0; width: 100%; background: #2c3e50; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; box-sizing: border-box; }
         .save-btn { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .container { max-width: 1200px; margin: auto; padding: 15px; }
-        .card { background: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #ddd; }
+        .card { background: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #ddd; overflow-x: auto; }
         .item-row { display: grid; grid-template-columns: 50px 120px 1fr 100px 100px 80px 120px 40px; gap: 10px; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
-        .user-row { display: grid; grid-template-columns: 1fr 1.5fr 1fr 1fr; gap: 10px; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+        /* 유저 행 레이아웃 수정: 닉네임(수정), 골드, 정지사유, 상태, 버튼 */
+        .user-row { display: grid; grid-template-columns: 150px 120px 1fr 80px 100px; gap: 10px; align-items: center; padding: 10px; border-bottom: 1px solid #eee; min-width: 800px; }
         .img-preview { width: 50px; height: 50px; background: #eee; border-radius: 8px; object-fit: contain; }
         input, textarea { padding: 8px; border: 1px solid #ddd; border-radius: 6px; width: 100%; box-sizing: border-box; font-size: 13px; }
         h3 { border-left: 5px solid #2c3e50; padding-left: 10px; margin: 30px 0 15px; }
@@ -48,7 +48,6 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZnJqemNuZWZzYnVhZG5rZHVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4MjE1MTYsImV4cCI6MjA4MjM5NzUxNn0.D3Za1nMw-x0JwOpkFuYceUHlagcpRdrpFqNUIP5Kjdc';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     
-    // 비밀번호 체크 로직 수정 (맞을 때까지 반복)
     function checkPassword() {
         let pw = prompt("관리자 비밀번호를 입력하세요.");
         while (pw !== "1234") {
@@ -72,6 +71,7 @@
     }
 
     function render() {
+        // 아이템 렌더링
         const sList = document.getElementById('sword-list'); sList.innerHTML = '';
         swordData.forEach((s, i) => {
             const div = document.createElement('div'); div.className = 'item-row';
@@ -87,18 +87,22 @@
             sList.appendChild(div);
         });
 
+        // 유저 관리 렌더링
         const uBox = document.getElementById('user-list');
-        uBox.innerHTML = `<div class="user-row" style="font-weight:bold;"><div>닉네임</div><div>골드 수정</div><div>상태</div><div>작업</div></div>`;
+        uBox.innerHTML = `<div class="user-row" style="font-weight:bold;"><div>닉네임(수정)</div><div>골드</div><div>정지 사유</div><div>상태</div><div>작업</div></div>`;
         userData.forEach((user, i) => {
             const isBanned = user.is_banned === true;
             const div = document.createElement('div'); div.className = 'user-row';
-            div.innerHTML = `<div>${user.nickname}</div>
+            div.innerHTML = `
+                <input type="text" value="${user.nickname || ''}" onchange="userData[${i}].nickname=this.value">
                 <input type="number" value="${user.gold}" onchange="userData[${i}].gold=Number(this.value)">
+                <input type="text" placeholder="사유 입력" value="${user.ban_reason || ''}" onchange="userData[${i}].ban_reason=this.value">
                 <div style="color:${isBanned?'red':'green'}">${isBanned?'정지':'정상'}</div>
-                <button onclick="toggleBan(${i})" style="background:${isBanned?'#3498db':'#e74c3c'};color:white;border:none;border-radius:4px;cursor:pointer;">${isBanned?'해제':'정지'}</button>`;
+                <button onclick="toggleBan(${i})" style="background:${isBanned?'#3498db':'#e74c3c'};color:white;border:none;border-radius:4px;cursor:pointer;padding:5px;">${isBanned?'해제':'정지'}</button>`;
             uBox.appendChild(div);
         });
 
+        // 코드 관리 렌더링
         const cList = document.getElementById('code-list'); cList.innerHTML = '';
         rewardCodes.forEach((c, i) => {
             const div = document.createElement('div'); div.style.display='flex'; div.style.gap='10px'; div.style.marginBottom='5px';
@@ -119,18 +123,41 @@
 
     async function toggleBan(index) {
         const u = userData[index];
-        await supabaseClient.from('profiles').update({ is_banned: !u.is_banned }).eq('id', u.id);
-        userData[index].is_banned = !u.is_banned; render();
+        const newBanStatus = !u.is_banned;
+        // 즉시 UI 반영을 위해 상태 변경
+        userData[index].is_banned = newBanStatus;
+        if(!userData[index].ban_reason && newBanStatus) userData[index].ban_reason = "관리자에 의해 이용이 제한되었습니다.";
+        render();
     }
 
     async function saveAll() {
-        localStorage.setItem('codet_daily', document.getElementById('daily-reward').value);
-        await supabaseClient.from('sword_data').delete().neq('level', -1);
-        await supabaseClient.from('sword_data').insert(swordData);
-        await supabaseClient.from('reward_codes').delete().neq('reward_gold', -1);
-        if(rewardCodes.length > 0) await supabaseClient.from('reward_codes').insert(rewardCodes);
-        for(let u of userData) { await supabaseClient.from('profiles').update({ gold: u.gold }).eq('id', u.id); }
-        alert("저장 완료!");
+        try {
+            localStorage.setItem('codet_daily', document.getElementById('daily-reward').value);
+            
+            // 1. 강화 아이템 저장
+            await supabaseClient.from('sword_data').delete().neq('level', -1);
+            await supabaseClient.from('sword_data').insert(swordData);
+            
+            // 2. 보상 코드 저장
+            await supabaseClient.from('reward_codes').delete().neq('reward_gold', -1);
+            if(rewardCodes.length > 0) await supabaseClient.from('reward_codes').insert(rewardCodes);
+            
+            // 3. 유저 정보 업데이트 (닉네임, 골드, 정지상태, 사유)
+            for(let u of userData) { 
+                await supabaseClient.from('profiles').update({ 
+                    nickname: u.nickname,
+                    gold: u.gold, 
+                    is_banned: u.is_banned,
+                    ban_reason: u.ban_reason 
+                }).eq('id', u.id); 
+            }
+            
+            alert("모든 설정이 성공적으로 저장되었습니다!");
+            load(); // 최신 데이터로 리로드
+        } catch (e) {
+            console.error(e);
+            alert("저장 중 오류가 발생했습니다.");
+        }
     }
 
     function addSword() { swordData.push({ level: swordData.length+1, name: '새 검', upgrade_cost: 1000, sell_price: 500, success_rate: 0.5, image_url: '' }); render(); }

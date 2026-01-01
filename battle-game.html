@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>배틀 게임 - 검강화</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        
+        body { 
+            font-family: 'Pretendard', sans-serif;
+            background: #1a1a2e;
+            color: white;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: rgba(26, 32, 44, 0.9);
+            padding: 15px 20px;
+            border-bottom: 2px solid #4a5568;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            color: #ecc94b;
+            font-size: 24px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .battle-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            flex: 1;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .players {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        
+        .player {
+            width: 45%;
+            background: rgba(45, 55, 72, 0.8);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            border: 2px solid #4a5568;
+            transition: all 0.3s ease;
+        }
+        
+        .player.active {
+            border-color: #ecc94b;
+            box-shadow: 0 0 15px rgba(236, 201, 75, 0.5);
+        }
+        
+        .player h2 {
+            margin: 0 0 15px 0;
+            color: #ecc94b;
+            font-size: 20px;
+        }
+        
+        .sword {
+            font-size: 60px;
+            margin: 15px 0;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        .player-stats {
+            text-align: left;
+            margin-top: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+        }
+        
+        .hp-bar-container {
+            width: 100%;
+            height: 20px;
+            background: #2d3748;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .hp-bar {
+            height: 100%;
+            background: #48bb78;
+            width: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        .battle-log {
+            width: 100%;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #4a5568;
+            border-radius: 8px;
+            padding: 10px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .battle-log p {
+            margin: 5px 0;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            min-width: 150px;
+        }
+        
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn:disabled {
+            background: #4a5568;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        
+        .btn-attack {
+            background: #e53e3e;
+        }
+        
+        .btn-skill {
+            background: #9f7aea;
+        }
+        
+        .btn-run {
+            background: #a0aec0;
+        }
+        
+        .turn-indicator {
+            background: rgba(236, 201, 75, 0.2);
+            color: #ecc94b;
+            padding: 10px 20px;
+            border-radius: 20px;
+            margin: 15px 0;
+            font-weight: 600;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+        
+        .damage {
+            color: #f56565;
+            font-weight: bold;
+            animation: pop 0.3s ease-out;
+        }
+        
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+        
+        .victory {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            font-size: 32px;
+            color: #ecc94b;
+            text-align: center;
+        }
+        
+        .victory h2 {
+            font-size: 48px;
+            margin: 0 0 20px 0;
+            text-shadow: 0 0 10px rgba(236, 201, 75, 0.7);
+        }
+        
+        .victory p {
+            font-size: 20px;
+            margin: 10px 0;
+        }
+        
+        .victory .btn {
+            margin-top: 30px;
+            font-size: 18px;
+            padding: 15px 40px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚔️ 검강화 배틀</h1>
+    </div>
+    
+    <div class="battle-container">
+        <div id="turn-indicator" class="turn-indicator">로딩 중...</div>
+        
+        <div class="players">
+            <div id="player1" class="player">
+                <h2 id="player1-name">플레이어 1</h2>
+                <div class="sword" id="player1-sword">⚔️</div>
+                <div class="player-stats">
+                    <div class="stat">
+                        <span>레벨:</span>
+                        <span id="player1-level">1</span>
+                    </div>
+                    <div class="hp-bar-container">
+                        <div id="player1-hp-bar" class="hp-bar" style="width: 100%;"></div>
+                    </div>
+                    <div class="stat">
+                        <span>체력:</span>
+                        <span id="player1-hp">100 / 100</span>
+                    </div>
+                    <div class="stat">
+                        <span>공격력:</span>
+                        <span id="player1-attack">10</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="player2" class="player">
+                <h2 id="player2-name">플레이어 2</h2>
+                <div class="sword" id="player2-sword">⚔️</div>
+                <div class="player-stats">
+                    <div class="stat">
+                        <span>레벨:</span>
+                        <span id="player2-level">1</span>
+                    </div>
+                    <div class="hp-bar-container">
+                        <div id="player2-hp-bar" class="hp-bar" style="width: 100%;"></div>
+                    </div>
+                    <div class="stat">
+                        <span>체력:</span>
+                        <span id="player2-hp">100 / 100</span>
+                    </div>
+                    <div class="stat">
+                        <span>공격력:</span>
+                        <span id="player2-attack">10</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="battle-log" id="battle-log">
+            <p>배틀이 시작됩니다!</p>
+        </div>
+        
+        <div class="actions">
+            <button id="attack-btn" class="btn btn-attack">⚔️ 기본 공격</button>
+            <button id="skill-btn" class="btn btn-skill" disabled>🛡️ 방어 (Lv.5 필요)</button>
+            <button id="run-btn" class="btn btn-run">🏃 도망가기</button>
+        </div>
+    </div>
+    
+    <div id="victory-screen" class="victory hidden">
+        <h2 id="victory-title">승리!</h2>
+        <p id="victory-message">상대를 물리쳤습니다!</p>
+        <p id="reward-message">보상: 골드 +100, 경험치 +50</p>
+        <button class="btn" onclick="window.location.href='index.html'">메인으로</button>
+    </div>
+    
+    <script src="battle-game.js"></script>
+</body>
+</html>

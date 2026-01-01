@@ -92,11 +92,29 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         // Initialize Supabase client
-        const supabase = supabase.createClient(
-            'https://utfrjzcnefsbuadnkdud.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZnJqemNuZWZzYnVhZG5rZHVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4MjE1MTYsImV4cCI6MjA4MjM5NzUxNn0.D3Za1nMw-x0JwOpkFuYceUHlagcpRdrpFqNUIP5Kjdc'
-        );
-        window.supabase = supabase;
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Initialize Supabase
+                window.supabase = supabase.createClient(
+                    'https://utfrjzcnefsbuadnkdud.supabase.co',
+                    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZnJqemNuZWZzYnVhZG5rZHVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4MjE1MTYsImV4cCI6MjA4MjM5NzUxNn0.D3Za1nMw-x0JwOpkFuYceUHlagcpRdrpFqNUIP5Kjdc'
+                );
+                
+                // Check if user is authenticated
+                const { data: { session }, error: sessionError } = await window.supabase.auth.getSession();
+                if (sessionError || !session) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+                
+                // Initialize battle system
+                await initBattle();
+                
+            } catch (error) {
+                console.error('초기화 중 오류 발생:', error);
+                alert('시스템 초기화에 실패했습니다. 새로고침 해주세요.');
+            }
+        });
         
         let myId = null;
         let myNick = '';
@@ -106,16 +124,22 @@
         // 배틀 테이블 생성 함수
         async function createBattleTableIfNotExists() {
             try {
-                // SQL을 사용하여 테이블 생성
-                const { data, error } = await supabase.rpc('create_battle_table_if_not_exists');
+                // Check if RPC function exists
+                const { data: rpcCheck, error: rpcError } = await window.supabase
+                    .rpc('create_battle_table_if_not_exists')
+                    .select('*')
+                    .limit(1);
                 
-                if (error) {
-                    console.error('테이블 생성 중 오류 발생:', error);
-                    // RPC 함수가 없으면 직접 쿼리 실행
+                if (rpcError) {
+                    console.log('RPC 함수가 없습니다. 직접 테이블을 생성합니다.');
                     await createBattleTableDirectly();
-                } else {
-                    console.log('배틀 테이블이 성공적으로 생성되었습니다.');
+                    return;
                 }
+                
+                console.log('배틀 테이블이 성공적으로 확인되었습니다.');
+                // Initialize battle system
+                await setupRpcFunctions();
+                await startMatching();
             } catch (err) {
                 console.error('배틀 테이블 생성 오류:', err);
             }
@@ -156,7 +180,7 @@
                 await createBattleTableIfNotExists();
                 
                 // 사용자 인증 확인
-                const { data: { user }, error: authError } = await supabase.auth.getUser();
+                const { data: { user }, error: authError } = await window.supabase.auth.getUser();
                 
                 if (authError || !user) {
                     console.error('인증 오류:', authError);

@@ -123,34 +123,77 @@
         } catch (e) { alert("로그인이 만료되었거나 데이터 오류가 발생했습니다."); }
     }
 
+    function getSellPrice(level) {
+        // Calculate sell price based on level
+        if (level === 20) return 10000000; // 10,000,000G for level 20
+        
+        const cube = level * level * level;
+        if (level >= 15) return cube * 200;
+        if (level >= 10) return cube * 100;
+        return cube * 50;
+    }
+
     function updateUI() {
-        const item = swords[user.current_sword_lvl] || swords[1];
+        const currentLevel = user.current_sword_lvl;
+        const item = swords[currentLevel] || swords[1];
+        const upgradeCost = getEnhancementCost(currentLevel);
+        const sellPrice = getSellPrice(currentLevel);
+        
         document.getElementById('u-nick').innerText = (user.username || '플레이어') + '님';
         document.getElementById('u-gold').innerText = (user.gold || 0).toLocaleString() + "G";
         document.getElementById('u-money').innerText = (user.money || 0).toLocaleString() + "M";
         document.getElementById('s-name').innerText = `[+${item.level}] ${item.name}`;
         document.getElementById('s-desc').innerText = item.description;
-        document.getElementById('stat-cost').innerText = item.upgrade_cost.toLocaleString();
-        document.getElementById('stat-sell').innerText = (item.sell_price || 0).toLocaleString();
+        document.getElementById('stat-cost').innerText = upgradeCost.toLocaleString();
+        document.getElementById('stat-sell').innerText = sellPrice.toLocaleString();
         document.getElementById('stat-rate').innerText = Math.round(item.success_rate * 100);
         document.getElementById('s-img').src = item.image_url;
+    }
+
+    function getEnhancementCost(level) {
+        // Enhancement costs from PRD
+        const costs = [
+            100,        // 0 → 1
+            200,        // 1 → 2
+            400,        // 2 → 3
+            800,        // 3 → 4
+            1600,       // 4 → 5
+            3200,       // 5 → 6
+            6400,       // 6 → 7
+            12800,      // 7 → 8
+            25600,      // 8 → 9
+            51200,      // 9 → 10
+            102400,     // 10 → 11
+            204800,     // 11 → 12
+            409600,     // 12 → 13
+            819200,     // 13 → 14
+            1638400,    // 14 → 15
+            3276800,    // 15 → 16
+            6553600,    // 16 → 17
+            13107200,   // 17 → 18
+            26214400,   // 18 → 19
+            52428800    // 19 → 20
+        ];
+        return costs[level] || 0;
     }
 
     async function handleUpgrade() {
         const currentLevel = user.current_sword_lvl;
         const currentSword = swords[currentLevel];
         
-        // Get enhancement rates based on current level
+        // Get enhancement rates and cost based on current level
         const rates = getEnhancementRates(currentLevel);
+        const upgradeCost = getEnhancementCost(currentLevel);
         
-        if (user.gold < currentSword.upgrade_cost) return alert("골드가 부족합니다!");
+        if (upgradeCost <= 0) return alert("이미 최대 강화 레벨에 도달했습니다!");
+        if (user.gold < upgradeCost) return alert("골드가 부족합니다!");
         if (currentLevel >= 20) return alert("최대 강화 레벨(20)에 도달했습니다!");
 
         const img = document.getElementById('s-img');
         img.classList.add('hammering');
         
         // Deduct gold first
-        user.gold -= currentSword.upgrade_cost;
+        user.gold -= upgradeCost;
         
         // Determine enhancement result
         const result = determineEnhancementResult(rates);
@@ -234,13 +277,20 @@
     }
 
     async function handleSell() {
-        if (user.current_sword_lvl === 1) return alert("기본 검은 판매할 수 없습니다.");
-        const price = swords[user.current_sword_lvl].sell_price || 0;
-        if (!confirm(`${price}G에 판매하시겠습니까?`)) return;
+        const currentLevel = user.current_sword_lvl;
+        if (currentLevel === 1) return alert("기본 검은 판매할 수 없습니다.");
+        
+        const sellPrice = getSellPrice(currentLevel);
+        if (!confirm(`${sellPrice.toLocaleString()}G에 판매하시겠습니까?`)) return;
 
-        user.gold += price;
+        user.gold += sellPrice;
         user.current_sword_lvl = 1;
-        await supabaseClient.from('profiles').update({ gold: user.gold, current_sword_lvl: 1 }).eq('id', user.id);
+        await supabaseClient.from('profiles')
+            .update({ 
+                gold: user.gold, 
+                current_sword_lvl: 1 
+            })
+            .eq('id', user.id);
         updateUI();
     }
 

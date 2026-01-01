@@ -65,6 +65,15 @@
         // 2. 초기화 함수
         async function init() {
             try {
+                // Check for GM authentication in session storage first
+                const isGMAuthenticated = sessionStorage.getItem('gmAuthenticated') === 'true';
+                
+                if (!isGMAuthenticated) {
+                    alert('GM 인증이 필요합니다.');
+                    window.location.href = 'index.html';
+                    return;
+                }
+
                 // 라이브러리 존재 여부 확인 후 클라이언트 생성
                 if (window.supabase && window.supabase.createClient) {
                     client = window.supabase.createClient(S_URL, S_KEY, {

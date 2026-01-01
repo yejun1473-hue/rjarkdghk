@@ -407,144 +407,306 @@
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     
     // 배틀 관련 변수
-    let battleMatchingInterval = null;
+    let battleSubscription = null;
     let currentBattle = null;
+    let myId = null;
+    let myNick = '';
+
+    // 사용자 정보 로드 시 호출
+    async function loadUserInfo() {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            myId = user.id;
+            // 사용자 닉네임 가져오기
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('nickname')
+                .eq('id', user.id)
+                .single();
+            if (profile) {
+                myNick = profile.nickname || '플레이어';
+            }
+            
+            // 배틀 상태 구독 시작
+            setupBattleSubscription();
+        }
+    }
+
+    // 배틀 상태 변경 구독 설정
+    function setupBattleSubscription() {
+        // 기존 구독 해제
+        if (battleSubscription) {
+            supabase.removeChannel(battleSubscription);
+        }
+
+        // 실시간 구독 시작
+        battleSubscription = supabase
+            .channel('battles')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'battles',
+                filter: `player1_id=eq.${myId}||player2_id=eq.${myId}`, // 내가 참여중인 배틀만 필터링
+            }, handleBattleUpdate)
+            .subscribe();
+    }
+
+    // 배틀 상태 업데이트 처리
+    async function handleBattleUpdate(payload) {
+        const battle = payload.new || payload.old;
+        
+        switch(payload.eventType) {
+            case 'INSERT': // 새 배틀 생성됨
+                if (battle.player2_id) { // 상대방이 매칭된 경우
+                    currentBattle = {
+                        id: battle.id,
+                        opponent: battle.player2_nickname,
+                        opponentId: battle.player2_id,
+                        status: 'matching',
+                        isMyTurn: battle.current_player_id === myId
+                    };
+                    updateBattleUI();
+                }
+                break;
+                
+            case 'UPDATE': // 배틀 상태 업데이트
+                if (battle.status === 'in_progress') {
+                    currentBattle.status = 'in_progress';
+                    currentBattle.isMyTurn = battle.current_player_id === myId;
+                    updateBattleUI();
+                } else if (battle.status === 'completed') {
+                    // 배틀 결과 처리
+                    const isWinner = battle.winner_id === myId;
+                    const goldEarned = isWinner ? 100 : 10;
+                    
+                    // 골드 업데이트
+                    const currentGold = parseInt(document.getElementById('u-gold').textContent) || 0;
+                    document.getElementById('u-gold').textContent = currentGold + goldEarned;
+                    
+                    // 결과 표시
+                    showBattleResult(isWinner, battle.winner_nickname, goldEarned);
+                    
+                    // 서버에 골드 업데이트
+                    await updateGold(goldEarned);
+                }
+                break;
+        }
+    }
 
     // 배틀 시작 함수
-    function startBattle() {
+    async function startBattle() {
         openModal('battle-matching-modal');
         document.getElementById('matching-status').textContent = '상대방을 찾고 있습니다...';
         
-        // 랜덤한 대기 시간 (1~5초)
-        const matchTime = Math.floor(Math.random() * 4000) + 1000;
+        // 기존에 진행 중인 배틀이 있는지 확인
+        const { data: existingBattle } = await supabase
+            .from('battles')
+            .select('*')
+            .or(`player1_id.eq.${myId},player2_id.eq.${myId}`)
+            .in('status', ['waiting', 'in_progress'])
+            .maybeSingle();
+            
+        if (existingBattle) {
+            // 기존 배틀이 있으면 그 배틀로 복귀
+            currentBattle = {
+                id: existingBattle.id,
+                opponent: existingBattle.player1_id === myId ? 
+                    (existingBattle.player2_nickname || '상대방') : 
+                    (existingBattle.player1_nickname || '상대방'),
+                opponentId: existingBattle.player1_id === myId ? 
+                    existingBattle.player2_id : 
+                    existingBattle.player1_id,
+                status: existingBattle.status,
+                isMyTurn: existingBattle.current_player_id === myId
+            };
+            updateBattleUI();
+            return;
+        }
         
-        // 매칭 시뮬레이션
-        battleMatchingInterval = setTimeout(() => {
-            findOpponent();
-        }, matchTime);
+        // 새로운 배틀 생성 또는 기다리는 배틀에 참가
+        const { data: waitingBattle } = await supabase
+            .from('battles')
+            .select('*')
+            .eq('status', 'waiting')
+            .neq('player1_id', myId) // 자기 자신과는 매칭되지 않도록
+            .maybeSingle();
+            
+        if (waitingBattle) {
+            // 기다리는 배틀이 있으면 참가
+            const { error } = await supabase
+                .from('battles')
+                .update({
+                    player2_id: myId,
+                    player2_nickname: myNick,
+                    status: 'in_progress',
+                    current_player_id: Math.random() > 0.5 ? myId : waitingBattle.player1_id // 랜덤으로 선공 결정
+                })
+                .eq('id', waitingBattle.id);
+                
+            if (error) {
+                console.error('배틀 참가 실패:', error);
+                alert('배틀 참가에 실패했습니다. 다시 시도해주세요.');
+                closeModal('battle-matching-modal');
+            }
+        } else {
+            // 새로운 배틀 생성
+            const { data, error } = await supabase
+                .from('battles')
+                .insert([{
+                    player1_id: myId,
+                    player1_nickname: myNick,
+                    status: 'waiting',
+                    created_at: new Date().toISOString()
+                }])
+                .select()
+                .single();
+                
+            if (error) {
+                console.error('배틀 생성 실패:', error);
+                alert('배틀 생성에 실패했습니다. 다시 시도해주세요.');
+                closeModal('battle-matching-modal');
+            } else {
+                currentBattle = {
+                    id: data.id,
+                    status: 'waiting',
+                    opponent: null,
+                    opponentId: null,
+                    isMyTurn: false
+                };
+            }
+        }
     }
 
     // 배틀 매칭 취소
-    function cancelBattleMatching() {
-        if (battleMatchingInterval) {
-            clearTimeout(battleMatchingInterval);
-            battleMatchingInterval = null;
+    async function cancelBattleMatching() {
+        if (currentBattle && currentBattle.status === 'waiting') {
+            // 대기 중인 배틀 삭제
+            await supabase
+                .from('battles')
+                .delete()
+                .eq('id', currentBattle.id);
         }
+        currentBattle = null;
         closeModal('battle-matching-modal');
     }
 
-    // 상대방 찾기
-    async function findOpponent() {
-        // 여기서는 간단한 랜덤 매칭 시뮬레이션
-        // 실제로는 서버에서 매칭 로직을 구현해야 함
-        const myNick = document.getElementById('u-nick').textContent;
-        const fakeOpponents = [
-            '용사123', '전사킹', '마법사왕', '궁수대장', '도적대마왕',
-            '불의전사', '물의마법사', '바람의궁수', '대지의기사', '번개의도적'
-        ];
+    // 배틀 UI 업데이트
+    function updateBattleUI() {
+        if (!currentBattle) return;
         
-        // 나를 제외한 상대방 선택
-        const availableOpponents = fakeOpponents.filter(name => name !== myNick);
-        const opponent = availableOpponents[Math.floor(Math.random() * availableOpponents.length)];
+        const statusElement = document.getElementById('matching-status');
         
-        // 배틀 결과 생성 (50% 확률로 승리)
-        const isWin = Math.random() > 0.5;
-        const winStreak = Math.floor(Math.random() * 10); // 연승 횟수 (0~9)
-        const goldEarned = 100 + (winStreak * 20); // 기본 100G + 연승당 20G 추가
+        if (currentBattle.status === 'waiting') {
+            statusElement.textContent = '상대방을 기다리고 있습니다...';
+        } else if (currentBattle.status === 'in_progress') {
+            statusElement.innerHTML = `
+                <p>상대방: <strong>${currentBattle.opponent}</strong></p>
+                <p>${currentBattle.isMyTurn ? '✅ 당신의 차례입니다!' : '⏳ 상대방의 차례입니다...'}</p>
+                <div style="margin-top: 20px;">
+                    <button class="btn-update" onclick="makeMove()" ${!currentBattle.isMyTurn ? 'disabled style="opacity:0.5;"' : ''}>
+                        공격하기
+                    </button>
+                </div>
+            `;
+        }
+    }
+    
+    // 공격하기
+    async function makeMove() {
+        if (!currentBattle || !currentBattle.isMyTurn) return;
         
-        // 배틀 결과 저장
-        currentBattle = {
-            opponent,
-            isWin,
-            winStreak,
-            goldEarned
-        };
+        // 배틀 상태 업데이트 (여기서는 단순히 턴을 넘기는 것으로 구현)
+        const { error } = await supabase
+            .from('battles')
+            .update({
+                current_player_id: currentBattle.opponentId,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', currentBattle.id);
+            
+        if (error) {
+            console.error('공격 실패:', error);
+            return;
+        }
         
-        // 매칭 완료 후 1초 후에 결과 표시
-        document.getElementById('matching-status').textContent = `상대를 찾았습니다: ${opponent}`;
+        // 승리 판정 (임의로 30% 확률로 승리)
+        if (Math.random() < 0.3) {
+            await endBattle(true);
+        }
+    }
+    
+    // 배틀 종료 처리
+    async function endBattle(isWinner) {
+        const winnerId = isWinner ? myId : currentBattle.opponentId;
+        const winnerNick = isWinner ? myNick : currentBattle.opponent;
         
-        setTimeout(() => {
-            closeModal('battle-matching-modal');
-            showBattleResult();
-        }, 1000);
+        await supabase
+            .from('battles')
+            .update({
+                status: 'completed',
+                winner_id: winnerId,
+                winner_nickname: winnerNick,
+                completed_at: new Date().toISOString()
+            })
+            .eq('id', currentBattle.id);
+            
+        // 결과 표시는 handleBattleUpdate에서 처리됨
+    }
+    
+    // 골드 업데이트
+    async function updateGold(amount) {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('gold')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (profile) {
+                    await supabase
+                        .from('profiles')
+                        .update({ gold: (parseInt(profile.gold) || 0) + amount })
+                        .eq('id', user.id);
+                }
+            }
+        } catch (error) {
+            console.error('골드 업데이트 실패:', error);
+        }
     }
     
     // 배틀 결과 표시
-    async function showBattleResult() {
-        const { opponent, isWin, winStreak, goldEarned } = currentBattle;
+    function showBattleResult(isWin, winnerNick, goldEarned) {
         const resultTitle = document.getElementById('battle-result-title');
         const resultContent = document.getElementById('battle-result-content');
         
         if (isWin) {
             resultTitle.textContent = '🎉 승리하셨습니다! 🎉';
             resultContent.innerHTML = `
-                <p>축하합니다! <strong>${opponent}</strong>님을 상대로 승리하셨습니다!</p>
-                <p>연승: ${winStreak}연승</p>
+                <p>축하합니다! <strong>${winnerNick}</strong>으로 승리하셨습니다!</p>
                 <p style="color: #f39c12; font-weight: bold; font-size: 24px;">+${goldEarned}G 획득!</p>
             `;
-            
-            // 골드 업데이트
-            const currentGold = parseInt(document.getElementById('u-gold').textContent) || 0;
-            document.getElementById('u-gold').textContent = currentGold + goldEarned;
-            
-            // 여기서 서버에 골드 업데이트 요청을 보내야 함
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user) {
-                    const { data: profile, error } = await supabase
-                        .from('profiles')
-                        .select('gold')
-                        .eq('id', user.id)
-                        .single();
-                    
-                    if (!error && profile) {
-                        await supabase
-                            .from('profiles')
-                            .update({ gold: (profile.gold || 0) + goldEarned })
-                            .eq('id', user.id);
-                    }
-                }
-            } catch (error) {
-                console.error('골드 업데이트 실패:', error);
-            }
         } else {
             resultTitle.textContent = '😢 아쉽게 졌습니다...';
             resultContent.innerHTML = `
-                <p><strong>${opponent}</strong>님에게 패배하셨습니다...</p>
+                <p><strong>${winnerNick}</strong>님에게 패배하셨습니다...</p>
                 <p>다음엔 꼭 이기세요!</p>
-                <p>위로의 상금: 10G</p>
+                <p>위로의 상금: ${goldEarned}G</p>
             `;
-            
-            // 패배 보상 (기본 10G)
-            const currentGold = parseInt(document.getElementById('u-gold').textContent) || 0;
-            document.getElementById('u-gold').textContent = currentGold + 10;
-            
-            // 서버에 골드 업데이트 요청
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user) {
-                    const { data: profile, error } = await supabase
-                        .from('profiles')
-                        .select('gold')
-                        .eq('id', user.id)
-                        .single();
-                    
-                    if (!error && profile) {
-                        await supabase
-                            .from('profiles')
-                            .update({ gold: (profile.gold || 0) + 10 })
-                            .eq('id', user.id);
-                    }
-                }
-            } catch (error) {
-                console.error('골드 업데이트 실패:', error);
-            }
         }
         
+        // 배틀 상태 초기화
+        currentBattle = null;
+        
+        // 결과 모달 표시
         openModal('battle-result-modal');
     }
 
-    init();
+    // 사용자 정보 로드 및 배틀 시스템 초기화
+    init().then(() => {
+        loadUserInfo();
+    });
 </script>
 </body>
 </html>

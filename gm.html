@@ -199,10 +199,14 @@
     <div id="notification" class="notification"></div>
     
     <script>
-        // Supabase is already loaded via CDN in the head
+        // Use the global supabase object from CDN
         const SUPABASE_URL = 'https://utfrjzcnefsbuadnkdud.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZnJqemNuZWZzYnVhZG5rZHVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4MjE1MTYsImV4cCI6MjA4MjM5NzUxNn0.D3Za1nMw-x0JwOpkFuYceUHlagcpRdrpFqNUIP5Kjdc';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // Initialize Supabase client if not already initialized
+        if (typeof supabase === 'undefined') {
+            window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
         
         let currentUser = null;
         let allUsers = [];

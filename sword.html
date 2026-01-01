@@ -137,31 +137,100 @@
     }
 
     async function handleUpgrade() {
-        const current = swords[user.current_sword_lvl];
-        if (user.gold < current.upgrade_cost) return alert("골드가 부족합니다!");
+        const currentLevel = user.current_sword_lvl;
+        const currentSword = swords[currentLevel];
+        
+        // Get enhancement rates based on current level
+        const rates = getEnhancementRates(currentLevel);
+        
+        if (user.gold < currentSword.upgrade_cost) return alert("골드가 부족합니다!");
+        if (currentLevel >= 20) return alert("최대 강화 레벨(20)에 도달했습니다!");
 
         const img = document.getElementById('s-img');
         img.classList.add('hammering');
-
-        const success = Math.random() < current.success_rate;
-        // 실패 시 1레벨 미만으로 떨어지지 않게 고정
-        let nextLvl = success ? user.current_sword_lvl + 1 : Math.max(1, user.current_sword_lvl - 1);
-
-        // Max level check (20)
-        if (nextLvl > 20) {
-            img.classList.remove('hammering');
-            return alert("최대 강화 레벨(20)에 도달했습니다!");
+        
+        // Deduct gold first
+        user.gold -= currentSword.upgrade_cost;
+        
+        // Determine enhancement result
+        const result = determineEnhancementResult(rates);
+        let newLevel = currentLevel;
+        let message = "";
+        
+        switch(result) {
+            case 'success':
+                newLevel = currentLevel + 1;
+                message = `강화 성공! [+${newLevel}레벨]`;
+                break;
+            case 'maintain':
+                message = "강화 실패! (유지)";
+                break;
+            case 'drop':
+                newLevel = Math.max(0, currentLevel - 1);
+                message = `강화 실패! (${newLevel}레벨로 하락)`;
+                break;
+            case 'destroy':
+                newLevel = 0;
+                message = "강화 실패! (검 파괴)";
+                break;
         }
-
-        user.gold -= current.upgrade_cost;
-        const { error } = await supabaseClient.from('profiles').update({ gold: user.gold, current_sword_lvl: nextLvl }).eq('id', user.id);
+        
+        // Update user data
+        const { error } = await supabaseClient
+            .from('profiles')
+            .update({ 
+                gold: user.gold, 
+                current_sword_lvl: newLevel 
+            })
+            .eq('id', user.id);
 
         setTimeout(() => {
             img.classList.remove('hammering');
-            user.current_sword_lvl = nextLvl;
-            showEffect(success);
+            user.current_sword_lvl = newLevel;
+            showEffect(result === 'success', message);
             updateUI();
         }, 600);
+    }
+    
+    function getEnhancementRates(level) {
+        // Format: { success: %, maintain: %, drop: %, destroy: % }
+        const rates = {
+            0: { success: 95, maintain: 5, drop: 0, destroy: 0 },
+            1: { success: 90, maintain: 10, drop: 0, destroy: 0 },
+            2: { success: 85, maintain: 15, drop: 0, destroy: 0 },
+            3: { success: 80, maintain: 20, drop: 0, destroy: 0 },
+            4: { success: 75, maintain: 25, drop: 0, destroy: 0 },
+            5: { success: 70, maintain: 20, drop: 10, destroy: 0 },
+            6: { success: 65, maintain: 15, drop: 15, destroy: 5 },
+            7: { success: 60, maintain: 10, drop: 20, destroy: 10 },
+            8: { success: 55, maintain: 5, drop: 25, destroy: 15 },
+            9: { success: 50, maintain: 0, drop: 30, destroy: 20 },
+            10: { success: 45, maintain: 0, drop: 35, destroy: 20 },
+            11: { success: 40, maintain: 0, drop: 35, destroy: 25 },
+            12: { success: 35, maintain: 0, drop: 40, destroy: 25 },
+            13: { success: 30, maintain: 0, drop: 45, destroy: 25 },
+            14: { success: 25, maintain: 0, drop: 45, destroy: 30 },
+            15: { success: 20, maintain: 0, drop: 45, destroy: 35 },
+            16: { success: 15, maintain: 0, drop: 45, destroy: 40 },
+            17: { success: 10, maintain: 0, drop: 45, destroy: 45 },
+            18: { success: 5, maintain: 0, drop: 45, destroy: 50 },
+            19: { success: 1, maintain: 0, drop: 49, destroy: 50 }
+        };
+        return rates[level] || rates[0];
+    }
+    
+    function determineEnhancementResult(rates) {
+        const rand = Math.random() * 100;
+        let cumulative = 0;
+        
+        for (const [result, probability] of Object.entries(rates)) {
+            cumulative += probability;
+            if (rand < cumulative) {
+                return result;
+            }
+        }
+        
+        return 'maintain'; // Default fallback
     }
 
     async function handleSell() {
@@ -175,12 +244,12 @@
         updateUI();
     }
 
-    function showEffect(win) {
+    function showEffect(win, message) {
         const el = document.getElementById('full-effect');
         el.style.display = 'flex';
         el.style.backgroundColor = win ? 'rgba(72, 187, 120, 0.9)' : 'rgba(245, 101, 101, 0.9)';
-        el.innerText = win ? "강화 성공!!" : "강화 실패!\n-1LV";
-        setTimeout(() => el.style.display = 'none', 800);
+        el.innerText = message || (win ? "강화 성공!!" : "강화 실패!");
+        setTimeout(() => el.style.display = 'none', 1000);
     }
 
     function showGoldEffect(amt, isPlus) {

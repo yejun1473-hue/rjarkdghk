@@ -112,6 +112,7 @@
         const { data: { session } } = await supabaseClient.auth.getSession();
         if(!session) { window.location.href="login.html"; return; }
         
+        // 프로필 정보 로드
         const { data: p, error } = await supabaseClient.from('profiles').select('*').eq('id', session.user.id).single();
         if(error || !p) { window.location.href="login.html"; return; }
         
@@ -123,8 +124,10 @@
     }
 
     function updateUI() {
+        // DB에 컬럼이 없을 경우를 대비해 OR 연산자 사용
         document.getElementById('u-nick').innerText = (user.nickname || "플레이어") + "님";
         document.getElementById('u-gold').innerText = (user.gold || 0).toLocaleString() + "G";
+        // avatar_url 컬럼이 없으면 기본 이미지
         document.getElementById('u-avatar').src = user.avatar_url || DEFAULT_AVATAR;
     }
 
@@ -159,43 +162,45 @@
         document.getElementById('edit-avatar-prev').src = DEFAULT_AVATAR; 
     }
 
-    // 170번째 줄 부근: 업로드 로직 대폭 수정 (에러 캐칭 및 경로 안정성 확보)
+    // 사진 업로드 및 미리보기 (Storage 업로드)
     async function uploadAndPreview(file) {
         if(!file) return;
         
         const saveBtn = document.getElementById('save-btn');
         const prevText = saveBtn.innerText;
         saveBtn.disabled = true;
-        saveBtn.innerText = "업로드 중...";
+        saveBtn.innerText = "이미지 업로드 중...";
 
         try {
             const fileExt = file.name.split('.').pop();
             const fileName = `${user.id}_${Date.now()}.${fileExt}`;
             const filePath = `avatars/${fileName}`;
 
-            // 1. Storage 업로드
+            // Storage에 업로드 (버킷 이름: codet-img)
             const { error: uploadError } = await supabaseClient.storage
                 .from('codet-img')
                 .upload(filePath, file);
 
             if(uploadError) throw uploadError;
 
-            // 2. 공개 URL 생성
+            // 업로드된 이미지의 공개 주소 가져오기
             const { data: { publicUrl } } = supabaseClient.storage
                 .from('codet-img')
                 .getPublicUrl(filePath);
 
-            // 3. 화면 미리보기 업데이트
+            // 화면에 미리보기 반영
             document.getElementById('edit-avatar-prev').src = publicUrl;
+
         } catch (error) {
-            console.error("Upload Error:", error);
-            alert("사진 업로드 중 오류가 발생했습니다.\n사유: " + error.message);
+            console.error("이미지 업로드 에러:", error);
+            alert("이미지 업로드 실패: " + error.message + "\n(버킷 정책 또는 버킷 생성을 확인하세요)");
         } finally {
             saveBtn.disabled = false;
             saveBtn.innerText = prevText;
         }
     }
 
+    // 변경사항 저장 (여기가 핵심)
     async function saveMyInfo() {
         const btn = document.getElementById('save-btn');
         btn.innerText = "저장 중...";
@@ -206,35 +211,43 @@
         const newAvatar = document.getElementById('edit-avatar-prev').src;
         const newPw = document.getElementById('edit-pw').value;
 
+        // 업데이트할 데이터 객체
+        const updateData = {
+            nickname: newNick,
+            phone: newPhone,
+            avatar_url: newAvatar
+        };
+
         try {
-            // DB 업데이트 (avatar_url, nickname, phone 한꺼번에 업데이트)
+            // 1. 프로필 정보 DB 업데이트
             const { error: updateError } = await supabaseClient
                 .from('profiles')
-                .update({ 
-                    nickname: newNick, 
-                    phone: newPhone,
-                    avatar_url: newAvatar 
-                })
+                .update(updateData)
                 .eq('id', user.id);
 
             if(updateError) {
-                // 여기서 'column does not exist' 에러가 나면 SQL Editor에서 컬럼을 추가해야 함
-                if(updateError.message.includes("column")) {
-                    throw new Error("DB에 'avatar_url' 또는 'phone' 컬럼이 없습니다. SQL Editor에서 컬럼을 생성해 주세요.");
+                // 특정 에러(컬럼 없음) 감지 시 정확한 안내 메시지 출력
+                if(updateError.message.includes("Could not find the") && updateError.message.includes("column")) {
+                    throw new Error("DB 설정 오류: 'avatar_url' 컬럼이 없습니다. Supabase SQL Editor에서 컬럼을 추가해주세요.");
                 }
                 throw updateError;
             }
 
-            // 비밀번호 변경 처리
+            // 2. 비밀번호 변경 (입력했을 경우만)
             if(newPw && newPw.length >= 6) { 
                 const { error: pwError } = await supabaseClient.auth.updateUser({ password: newPw });
                 if(pwError) throw pwError;
+            } else if(newPw && newPw.length > 0 && newPw.length < 6) {
+                alert("비밀번호는 6자 이상이어야 합니다.");
+                btn.innerText = "수정 내용 저장";
+                btn.disabled = false;
+                return;
             }
 
-            alert("정보가 성공적으로 수정되었습니다.");
+            alert("정보가 수정되었습니다.");
             window.location.reload();
         } catch (e) {
-            alert("수정 실패: " + e.message);
+            alert("저장 실패: " + e.message);
             btn.innerText = "수정 내용 저장";
             btn.disabled = false;
         }

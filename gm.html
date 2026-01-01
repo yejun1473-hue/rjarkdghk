@@ -199,59 +199,57 @@
     <div id="notification" class="notification"></div>
     
     <script>
-        // Use the global supabase object from CDN
+        // Supabase configuration
         const SUPABASE_URL = 'https://utfrjzcnefsbuadnkdud.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZnJqemNuZWZzYnVhZG5rZHVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4MjE1MTYsImV4cCI6MjA4MjM5NzUxNn0.D3Za1nMw-x0JwOpkFuYceUHlagcpRdrpFqNUIP5Kjdc';
         
-        // Initialize Supabase client
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        
+        // Global variables
+        let supabase;
         let currentUser = null;
         let allUsers = [];
         
-        // 페이지 로드 시 초기화
+        // Initialize the application
         document.addEventListener('DOMContentLoaded', async () => {
-            // Add event listener for logout button
-            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
-            
-            // Load users when page loads
-            await loadUsers();
-            
-            // Add search input event listener
-            document.getElementById('searchInput').addEventListener('input', filterUsers);
-            // 세션 스토리지에서 GM 인증 확인
-            const isGMAuthenticated = sessionStorage.getItem('gmAuthenticated') === 'true';
-            
-            if (!isGMAuthenticated) {
-                alert('접근 권한이 없습니다.');
-                window.location.href = 'index.html';
-                return;
+            try {
+                // Initialize Supabase client
+                if (typeof supabase === 'undefined') {
+                    supabase = supabaseClient.createClient(SUPABASE_URL, SUPABASE_KEY);
+                    window.supabase = supabase; // Make it globally available
+                }
+                // Add event listeners
+                document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+                document.getElementById('searchInput').addEventListener('input', filterUsers);
+                
+                // Load users
+                await loadUsers();
+                
+                // Check GM authentication
+                const isGMAuthenticated = sessionStorage.getItem('gmAuthenticated') === 'true';
+                if (!isGMAuthenticated) {
+                    alert('접근 권한이 없습니다.');
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                // Set current user as GM
+                currentUser = {
+                    id: 'gm-user',
+                    email: 'gm@game.com',
+                    username: 'Game Master',
+                    role: 'admin'
+                };
+                
+            } catch (error) {
+                console.error('초기화 중 오류 발생:', error);
+                showNotification('초기화 중 오류가 발생했습니다: ' + error.message, 'error');
             }
-            
-            // 현재 사용자 정보 설정 (GM으로 간주)
-            currentUser = {
-                id: 'gm-user',
-                email: 'gm@game.com',
-                username: 'Game Master',
-                role: 'admin'
-            };
-            
-            // 이벤트 리스너 등록
-            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
             document.getElementById('searchInput').addEventListener('input', filterUsers);
+            // Search input enter key handler
             document.getElementById('searchInput').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     filterUsers();
                 }
             });
-            
-            // 사용자 목록 로드
-            try {
-                await loadUsers();
-            } catch (error) {
-                console.error('사용자 목록을 불러오는 중 오류 발생:', error);
-                showNotification('사용자 목록을 불러오는 중 오류가 발생했습니다.', 'error');
-            }
         });
         
         async function loadUsers() {

@@ -19,7 +19,10 @@
         .user-card.banned { background-color: #fff3cd; }
         .user-info { flex: 1; min-width: 200px; }
         .user-email { color: #6c757d; font-size: 0.9em; }
-        .user-stats { display: flex; gap: 15px; }
+        .user-stats { display: flex; gap: 15px; flex-wrap: wrap; }
+        .conversion-section { margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px; width: 100%; }
+        .conversion-row { display: flex; gap: 10px; margin-top: 5px; }
+        .conversion-row input { flex: 1; max-width: 100px; }
         .stat-box { min-width: 120px; }
         .stat-label { font-size: 0.8em; color: #6c757d; }
         .stat-value { display: flex; align-items: center; gap: 5px; }
@@ -27,6 +30,7 @@
         .btn { padding: 5px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
         .btn-save { background-color: #28a745; color: white; }
         .btn-ban { background-color: #dc3545; color: white; }
+        .btn-convert { background-color: #17a2b8; color: white; margin-top: 5px; }
         .gold { color: #f1c40f; }
         .money { color: #9b59b6; }
         .notification { position: fixed; top: 20px; right: 20px; padding: 15px 20px; border-radius: 5px; color: white; opacity: 0; transition: 0.3s; z-index: 1000; }
@@ -174,6 +178,20 @@
                             ${u.is_banned ? '해제' : '정지'}
                         </button>
                     </div>
+                    <div class="conversion-section">
+                        <div style="font-size: 0.9em; margin-bottom: 5px; color: #6c757d;">
+                            <i class="fas fa-exchange-alt"></i> 재화 변환 (1 GOLD = 100 MONEY)
+                        </div>
+                        <div class="conversion-row">
+                            <input type="number" id="convert-amount-${u.id}" placeholder="금액" min="1">
+                            <select id="convert-from-${u.id}" style="padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="gold">GOLD → MONEY</option>
+                                <option value="money">MONEY → GOLD</option>
+                            </select>
+                            <button class="btn btn-convert" onclick="convertUserCurrency('${u.id}')">변환</button>
+                        </div>
+                        <div id="convert-result-${u.id}" style="margin-top: 5px; font-size: 0.8em; color: #28a745; display: none;"></div>
+                    </div>
                 </div>
             `).join('');
         }
@@ -247,7 +265,86 @@
             }
         }
 
-        // 7. 정지 토글
+        // 7.1 재화 변환 함수
+        async function convertUserCurrency(userId) {
+            const amount = parseInt(document.getElementById(`convert-amount-${userId}`).value);
+            const direction = document.getElementById(`convert-from-${userId}`).value;
+            const resultDiv = document.getElementById(`convert-result-${userId}`);
+            
+            if (!amount || amount <= 0) {
+                resultDiv.textContent = '유효한 금액을 입력해주세요.';
+                resultDiv.style.color = '#dc3545';
+                resultDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                // 현재 사용자 재화 정보 가져오기
+                const { data: user, error: fetchError } = await client
+                    .from('profiles')
+                    .select('gold, money')
+                    .eq('id', userId)
+                    .single();
+
+                if (fetchError) throw fetchError;
+
+                let updateData = {};
+                let resultText = '';
+
+                if (direction === 'gold') {
+                    // GOLD → MONEY 변환
+                    const convertedAmount = amount * 100;
+                    updateData = {
+                        gold: user.gold - amount,
+                        money: user.money + convertedAmount
+                    };
+                    resultText = `${amount} GOLD → ${convertedAmount} MONEY로 변환되었습니다.`;
+                } else {
+                    // MONEY → GOLD 변환
+                    const requiredMoney = amount * 100;
+                    if (user.money < requiredMoney) {
+                        throw new Error(`변환에 필요한 MONEY가 부족합니다. (필요: ${requiredMoney} MONEY)`);
+                    }
+                    updateData = {
+                        gold: user.gold + amount,
+                        money: user.money - requiredMoney
+                    };
+                    resultText = `${requiredMoney} MONEY → ${amount} GOLD로 변환되었습니다.`;
+                }
+
+                // 데이터베이스 업데이트
+                const { error: updateError } = await client
+                    .from('profiles')
+                    .update(updateData)
+                    .eq('id', userId);
+
+                if (updateError) throw updateError;
+
+                // 성공 메시지 표시 및 UI 업데이트
+                resultDiv.textContent = resultText;
+                resultDiv.style.color = '#28a745';
+                resultDiv.style.display = 'block';
+
+                // 입력 필드 초기화
+                document.getElementById(`convert-amount-${userId}`).value = '';
+                
+                // 3초 후 메시지 숨기기
+                setTimeout(() => {
+                    resultDiv.style.display = 'none';
+                }, 3000);
+
+                // 사용자 목록 새로고침
+                loadUsers();
+
+            } catch (error) {
+                console.error('Currency conversion error:', error);
+                resultDiv.textContent = error.message || '재화 변환 중 오류가 발생했습니다.';
+                resultDiv.style.color = '#dc3545';
+                resultDiv.style.display = 'block';
+            }
+        }
+
+        // 7.2 정지 토글
         async function toggleBan(id, status) {
             try {
                 if(!confirm(status ? '해당 사용자를 정지하시겠습니까?' : '정지를 해제하시겠습니까?')) {

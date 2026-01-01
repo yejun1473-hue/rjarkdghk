@@ -37,10 +37,13 @@
 <div class="app-container" id="main-ui" style="display:none;">
     <div class="profile-card">
         <div class="user-info">
-            <div class="user-text"><h2 id="u-nick">...님</h2><h2>안녕하세요!</h2></div>
+            <div class="user-text"><h2 id="u-nick">...</h2><h2>안녕하세요!</h2></div>
             <img id="u-avatar" src="" class="profile-img">
         </div>
-        <div class="gold-box"><span class="gold-label">GOLD:</span><span class="gold-value" id="u-gold">0G</span></div>
+        <div class="gold-box">
+            <div><span class="gold-label">GOLD:</span><span class="gold-value" id="u-gold">0</span>G</div>
+            <div><span class="gold-label">MONEY:</span><span class="money-value" id="u-money" style="color: #9b59b6;">0</span>M</div>
+        </div>
         <div class="top-btns">
             <button class="top-btn" onclick="openRank()">랭킹</button>
             <button class="top-btn" onclick="handleDailyCheck()">출석체크</button>
@@ -123,8 +126,9 @@
     }
 
     function updateUI() {
-        document.getElementById('u-nick').innerText = (user.nickname || "플레이어") + "님";
-        document.getElementById('u-gold').innerText = (user.gold || 0).toLocaleString() + "G";
+        document.getElementById('u-nick').innerText = (user.username || "플레이어") + "님";
+        document.getElementById('u-gold').innerText = (user.gold || 0).toLocaleString();
+        document.getElementById('u-money').innerText = (user.money || 0).toLocaleString();
         document.getElementById('u-avatar').src = user.avatar_url || DEFAULT_AVATAR;
     }
 
@@ -134,13 +138,13 @@
         if(lastCheck === today) return alert("이미 오늘 출석하셨습니다.");
         
         const reward = parseInt(localStorage.getItem('codet_daily')) || 5000;
-        const newGold = (user.gold || 0) + reward;
+        const newGold = (parseInt(user.gold) || 0) + reward;
+        user.gold = newGold;
         
         const { error } = await supabaseClient.from('profiles').update({ gold: newGold }).eq('id', user.id);
         if (error) { 
             alert("출석 실패: " + error.message); 
         } else {
-            user.gold = newGold;
             localStorage.setItem(`daily_chk_${user.id}`, today);
             alert(`${reward.toLocaleString()}G 출석 완료!`);
             updateUI();

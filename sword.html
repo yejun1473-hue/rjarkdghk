@@ -52,10 +52,11 @@
             <button onclick="location.href='index.html'" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;" title="홈으로">
                 <i class="fa-solid fa-house"></i>
             </button>
-            <span id="u-nick" style="font-size: 14px;">...님</span>
+            <span id="u-nick" style="font-size: 14px;">...</span>
         </div>
         <div class="gold-wrap" id="gold-anchor">
-            <span id="u-gold" style="color:#f1c40f; font-weight: bold;">0G</span>
+            <span id="u-gold" style="color:#f1c40f; font-weight: bold; margin-right: 10px;">0G</span>
+            <span id="u-money" style="color:#9b59b6; font-weight: bold;">0M</span>
             <button class="code-btn" onclick="redeem()">코드</button>
             <button id="adminBtn" style="background:none; border:none; color:white; font-size:20px; cursor:pointer; display:none; margin-left: 10px;">
                 <i class="fa-solid fa-gear"></i>
@@ -124,7 +125,9 @@
 
     function updateUI() {
         const item = swords[user.current_sword_lvl] || swords[1];
-        document.getElementById('u-gold').innerText = user.gold.toLocaleString() + "G";
+        document.getElementById('u-nick').innerText = (user.username || '플레이어') + '님';
+        document.getElementById('u-gold').innerText = (user.gold || 0).toLocaleString() + "G";
+        document.getElementById('u-money').innerText = (user.money || 0).toLocaleString() + "M";
         document.getElementById('s-name').innerText = `[+${item.level}] ${item.name}`;
         document.getElementById('s-desc').innerText = item.description;
         document.getElementById('stat-cost').innerText = item.upgrade_cost.toLocaleString();
@@ -144,9 +147,10 @@
         // 실패 시 1레벨 미만으로 떨어지지 않게 고정
         let nextLvl = success ? user.current_sword_lvl + 1 : Math.max(1, user.current_sword_lvl - 1);
 
-        if (success && !swords[nextLvl]) {
+        // Max level check (20)
+        if (nextLvl > 20) {
             img.classList.remove('hammering');
-            return alert("이미 신화적인 경지에 도달했습니다!");
+            return alert("최대 강화 레벨(20)에 도달했습니다!");
         }
 
         user.gold -= current.upgrade_cost;
@@ -215,8 +219,9 @@
                         ${allUsers.map(u => `
                             <div style="padding: 10px; border-bottom: 1px solid #eee;">
                                 <strong>${u.username || u.email}</strong>
-                                <div>골드: <input type="number" id="gold-${u.id}" value="${u.gold}" style="width: 80px;"></div>
-                                <div>레벨: <input type="number" id="level-${u.id}" value="${u.current_sword_lvl}" min="1" style="width: 60px;"></div>
+                                <div>골드: <input type="number" id="gold-${u.id}" value="${u.gold || 0}" style="width: 80px;"></div>
+                                <div>머니: <input type="number" id="money-${u.id}" value="${u.money || 0}" style="width: 80px;"></div>
+                                <div>레벨: <input type="number" id="level-${u.id}" value="${u.current_sword_lvl}" min="1" max="20" style="width: 60px;"></div>
                                 <button onclick="updateUser('${u.id}')" style="margin-top: 5px; padding: 2px 8px; font-size: 12px;">수정</button>
                             </div>
                         `).join('')}
@@ -232,12 +237,16 @@
         // Add the updateUser function to the window object
         window.updateUser = async (userId) => {
             const gold = parseInt(document.getElementById(`gold-${userId}`).value) || 0;
-            const level = parseInt(document.getElementById(`level-${userId}`).value) || 1;
+            const money = parseInt(document.getElementById(`money-${userId}`).value) || 0;
+            let level = parseInt(document.getElementById(`level-${userId}`).value) || 1;
+            
+            // Enforce max level of 20
+            level = Math.min(level, 20);
             
             try {
                 const { error } = await supabaseClient
                     .from('profiles')
-                    .update({ gold, current_sword_lvl: level })
+                    .update({ gold, money, current_sword_lvl: level })
                     .eq('id', userId);
                 
                 if (error) throw error;

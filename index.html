@@ -414,33 +414,45 @@
 
     // 사용자 정보 로드 시 호출
     async function loadUserInfo() {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-            myId = user.id;
-            // 사용자 닉네임 가져오기
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('nickname')
-                .eq('id', user.id)
-                .single();
-            if (profile) {
-                myNick = profile.nickname || '플레이어';
-            }
+        try {
+            const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+            if (userError) throw userError;
             
-            // 배틀 상태 구독 시작
-            setupBattleSubscription();
+            if (user) {
+                myId = user.id;
+                // 사용자 닉네임 가져오기
+                const { data: profile, error: profileError } = await supabaseClient
+                    .from('profiles')
+                    .select('nickname')
+                    .eq('id', user.id)
+                    .single();
+                    
+                if (profileError) throw profileError;
+                
+                if (profile) {
+                    myNick = profile.nickname || '플레이어';
+                }
+                
+                // 배틀 상태 구독 시작
+                setupBattleSubscription();
+            }
+        } catch (error) {
+            console.error('사용자 정보 로드 중 오류:', error);
+            alert('사용자 정보를 불러오는 중 오류가 발생했습니다: ' + error.message);
         }
     }
 
     // 배틀 상태 변경 구독 설정
     function setupBattleSubscription() {
+        if (!myId) return;
+        
         // 기존 구독 해제
         if (battleSubscription) {
-            supabase.removeChannel(battleSubscription);
+            supabaseClient.removeChannel(battleSubscription);
         }
 
         // 실시간 구독 시작
-        battleSubscription = supabase
+        battleSubscription = supabaseClient
             .channel('battles')
             .on('postgres_changes', {
                 event: '*',
@@ -702,8 +714,17 @@
     }
 
     // 사용자 정보 로드 및 배틀 시스템 초기화
-    init().then(() => {
-        loadUserInfo();
+    document.addEventListener('DOMContentLoaded', function() {
+        init().then(() => {
+            // Supabase 초기화가 완료된 후에만 사용자 정보 로드
+            if (supabaseClient) {
+                loadUserInfo();
+            } else {
+                console.error('Supabase 클라이언트가 초기화되지 않았습니다.');
+            }
+        }).catch(error => {
+            console.error('초기화 중 오류 발생:', error);
+        });
     });
 </script>
 </body>

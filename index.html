@@ -6,65 +6,65 @@
     <title>codetbase - 홈</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { background: #e6e9ed; font-family: 'Pretendard', sans-serif; margin: 0; padding: 20px 0; display: flex; flex-direction: column; align-items: center; }
-        .app-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 15px; box-sizing: border-box; padding: 0 20px; }
+        body { background: #f0f0f0; font-family: 'Pretendard', sans-serif; margin: 0; padding: 20px 0; display: flex; flex-direction: column; align-items: center; }
+        .app-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box; padding: 0 20px; }
         
-        /* 프로필 카드 스타일 (이미지 시안 참고) */
-        .profile-card { background: white; border: 3px solid black; border-radius: 30px; padding: 25px; box-sizing: border-box; }
-        .user-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .user-text h2 { margin: 0; font-size: 26px; font-weight: 900; line-height: 1.2; }
-        .profile-img { width: 75px; height: 75px; border-radius: 50%; border: 3px solid #000; background: #eee; }
+        /* 프로필 카드 상단 */
+        .profile-card { background: white; border: 3px solid black; border-radius: 30px; padding: 20px; box-sizing: border-box; }
+        .user-info { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
+        .user-text h2 { margin: 0; font-size: 24px; font-weight: 900; }
+        .profile-img { width: 70px; height: 70px; border-radius: 50%; border: 2px solid #000; object-fit: cover; background: #eee; }
         
-        /* 재화 표시 상자 */
-        .gold-box-container { background: #ddd; border-radius: 20px; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .currency-row { display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: 24px; }
-        .gold-label { color: #000; }
-        .gold-value { color: #f39c12; }
-        .money-value { color: #2ecc71; }
+        /* 재화 표시 박스 */
+        .gold-box { background: #eee; border-radius: 20px; padding: 10px 20px; display: flex; flex-direction: column; gap: 5px; margin-bottom: 5px; }
+        .gold-label { font-weight: 900; font-size: 22px; margin-right: 10px; }
+        .gold-value { color: #f39c12; font-weight: 900; font-size: 22px; }
+        .money-value { color: #9b59b6; font-weight: 900; font-size: 22px; }
 
-        /* 버튼 그리드 (이미지 시안 2x2 방식) */
-        .button-grid-container { background: white; border: 3px solid black; border-radius: 30px; padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .grid-btn { border: none; border-radius: 20px; padding: 12px; font-weight: 900; font-size: 20px; cursor: pointer; color: #333; transition: 0.2s; }
-        .btn-gray { background: #eee; }
-        .btn-pink { background: #ff9a9e; }
-        .btn-purple { background: #d4bfff; }
+        /* 이미지 시안과 동일한 2x2 버튼 그리드 */
+        .top-btns-grid { background: white; border: 3px solid black; border-radius: 25px; padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .grid-btn { border: none; border-radius: 15px; padding: 12px; font-weight: 900; font-size: 18px; cursor: pointer; transition: 0.2s; }
+        .btn-gray { background: #ddd; color: #333; }
+        .btn-pink { background: #ff9a9e; color: #333; }
+        .btn-purple { background: #d4bfff; color: #333; }
 
-        /* 게임 선택 영역 (Sword Upgrade / Coming Soon) */
+        /* 중앙 게임 카드 영역 */
         .game-selection { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .game-card { width: 100%; border-radius: 20px; cursor: pointer; border: 2px solid #000; overflow: hidden; }
+        .game-card { width: 100%; cursor: pointer; border-radius: 20px; overflow: hidden; border: 1px solid #ddd; }
         .game-card img { width: 100%; display: block; }
 
         /* 하단 배너 및 메뉴 */
-        .banner-img { width: 100%; border-radius: 20px; border: 2px solid #ddd; }
-        .bottom-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
-        .nav-btn { background: #c2cfff; border: none; border-radius: 20px; padding: 15px; font-weight: 900; font-size: 22px; cursor: pointer; }
+        .banner-container { width: 100%; border-radius: 15px; overflow: hidden; border: 1px solid #ddd; }
+        .banner-container img { width: 100%; display: block; }
+        .bottom-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .menu-btn { background: #c2cfff; border: none; border-radius: 20px; padding: 15px; font-weight: 900; font-size: 20px; cursor: pointer; }
 
-        /* 모달 공통 */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center; }
-        .modal-content { background: white; width: 85%; max-width: 350px; border-radius: 25px; padding: 25px; }
+        /* 모달 스타일 (기존 코드 유지) */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; }
+        .modal-content { background: white; width: 85%; max-width: 350px; border-radius: 25px; padding: 25px; position: relative; max-height: 90vh; overflow-y: auto; }
+        .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; font-weight: bold; }
+        .edit-group { margin-bottom: 15px; text-align: left; }
+        .edit-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #666; }
+        .edit-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
+        .btn-update { width: 100%; padding: 12px; background: #2c3e50; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-logout { width: 100%; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-<div class="app-container" id="main-ui">
+<div class="app-container" id="main-ui" style="display:none;">
     <div class="profile-card">
         <div class="user-info">
-            <div class="user-text"><h2 id="u-nick">...님</h2><h2>안녕하세요!</h2></div>
+            <div class="user-text"><h2 id="u-nick">...</h2><h2>안녕하세요!</h2></div>
             <img id="u-avatar" src="" class="profile-img">
         </div>
-        <div class="gold-box-container">
-            <div class="currency-row">
-                <span class="gold-label">GOLD:</span>
-                <span class="gold-value" id="u-gold">00000G</span>
-            </div>
-            <div class="currency-row">
-                <span class="gold-label">MONEY:</span>
-                <span class="money-value" id="u-money">00000M</span>
-            </div>
+        <div class="gold-box">
+            <div><span class="gold-label">GOLD:</span><span class="gold-value" id="u-gold">0</span>G</div>
+            <div><span class="gold-label">MONEY:</span><span class="money-value" id="u-money">0</span>M</div>
         </div>
     </div>
 
-    <div class="button-grid-container">
+    <div class="top-btns-grid">
         <button class="grid-btn btn-gray" onclick="openRank()">랭킹</button>
         <button class="grid-btn btn-gray" onclick="handleDailyCheck()">출석체크</button>
         <button class="grid-btn btn-pink" onclick="location.href='battle.html'">배틀</button>
@@ -76,37 +76,134 @@
         <div class="game-card" onclick="alert('준비중...')"><img src="https://i.ifh.cc/2DQFLq.png"></div>
     </div>
 
-    <img src="https://i.ifh.cc/W67OL2.png" class="banner-img">
+    <div class="banner-container">
+        <img src="https://i.ifh.cc/W67OL2.png">
+    </div>
 
-    <div class="bottom-nav">
-        <button class="nav-btn" onclick="location.href='chat.html'">고객센터</button>
-        <button class="nav-btn" onclick="openInfoModal()">나의정보</button>
+    <div class="bottom-menu">
+        <button class="menu-btn" onclick="location.href='chat.html'">고객센터</button>
+        <button class="menu-btn" onclick="openInfoModal()">나의정보</button>
     </div>
 </div>
 
+<div id="info-modal" class="modal"><div class="modal-content">
+    <span class="close-btn" onclick="closeModal('info-modal')">&times;</span>
+    <h2 style="text-align:center;">👤 내 정보 수정</h2>
+    <div style="text-align:center; margin-bottom: 20px;">
+        <img id="edit-avatar-prev" src="" style="width:80px; height:80px; border-radius:50%; border:2px solid #ddd; object-fit:cover;">
+        <input type="file" id="avatar-file" accept="image/*" style="display:none;" onchange="uploadAndPreview(this.files[0])">
+        <div style="display:flex; gap:5px; justify-content:center; margin-top:10px;">
+            <button onclick="document.getElementById('avatar-file').click()">사진 변경</button>
+            <button onclick="resetToDefaultAvatar()">기본 이미지</button>
+        </div>
+    </div>
+    <div class="edit-group"><label>닉네임</label><input type="text" id="edit-nick"></div>
+    <div class="edit-group"><label>전화번호</label><input type="text" id="edit-phone"></div>
+    <div class="edit-group"><label>새 비밀번호 (6자 이상)</label><input type="password" id="edit-pw" placeholder="변경 시에만 입력"></div>
+    <button class="btn-update" id="save-btn" onclick="saveMyInfo()">수정 내용 저장</button>
+    <button class="btn-logout" onclick="handleLogout()">로그아웃</button>
+</div></div>
+
+<div id="rank-modal" class="modal"><div class="modal-content">
+    <span class="close-btn" onclick="closeModal('rank-modal')">&times;</span>
+    <h2 style="text-align:center;">🏆 TOP 10 랭킹</h2>
+    <div id="rank-list"></div>
+</div></div>
+
+<div id="gmLoginModal" class="modal"><div class="modal-content">
+    <h2 style="text-align:center;">GM 로그인</h2>
+    <div class="edit-group"><label>아이디</label><input type="text" id="gmUsername"></div>
+    <div class="edit-group"><label>비밀번호</label><input type="password" id="gmPassword"></div>
+    <div style="display: flex; gap: 10px;">
+        <button class="btn-update" onclick="handleGMLogin()">로그인</button>
+        <button class="btn-logout" onclick="hideGMLogin()">취소</button>
+    </div>
+</div></div>
+
 <script>
-    const SUPABASE_URL = 'https://utfrjzcnefsbuadnkdud.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZnJqemNuZWZzYnVhZG5rZHVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4MjE1MTYsImV4cCI6MjA4MjM5NzUxNn0.D3Za1nMw-x0JwOpkFuYceUHlagcpRdrpFqNUIP5Kjdc';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // 원본 로직 복구
+    let supabaseClient;
+    const DEFAULT_AVATAR = "https://www.pngarts.com/files/10/Default-Profile-Picture-Download-PNG-Image.png";
     let user = null;
 
+    function initSupabase() {
+        const SUPABASE_URL = 'https://utfrjzcnefsbuadnkdud.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZnJqemNuZWZzYnVhZG5rZHVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4MjE1MTYsImV4cCI6MjA4MjM5NzUxNn0.D3Za1nMw-x0JwOpkFuYceUHlagcpRdrpFqNUIP5Kjdc';
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    }
+
     async function init() {
+        initSupabase();
         const { data: { session } } = await supabaseClient.auth.getSession();
         if(!session) { location.href="login.html"; return; }
         
         const { data: p } = await supabaseClient.from('profiles').select('*').eq('id', session.user.id).single();
+        if(!p) { location.href="login.html"; return; }
+        
         user = p;
         updateUI();
+        document.getElementById('main-ui').style.display = 'flex';
     }
 
     function updateUI() {
         document.getElementById('u-nick').innerText = (user.nickname || "플레이어") + "님";
-        document.getElementById('u-gold').innerText = (user.gold || 0).toLocaleString() + "G";
-        document.getElementById('u-money').innerText = (user.money || 0).toLocaleString() + "M";
-        document.getElementById('u-avatar').src = user.avatar_url || "https://www.pngarts.com/files/10/Default-Profile-Picture-Download-PNG-Image.png";
+        document.getElementById('u-gold').innerText = (user.gold || 0).toLocaleString();
+        document.getElementById('u-money').innerText = (user.money || 0).toLocaleString();
+        document.getElementById('u-avatar').src = user.avatar_url || DEFAULT_AVATAR;
     }
 
-    // 랭킹, 출석체크 등 기존 기능 함수들은 유지 (생략)
+    // 출석체크 로직 복구
+    async function handleDailyCheck() {
+        const today = new Date().toLocaleDateString();
+        const lastCheck = localStorage.getItem(`daily_chk_${user.id}`);
+        if (lastCheck === today) return alert("이미 오늘 출석하셨습니다.");
+        
+        const newGold = (parseInt(user.gold) || 0) + 10000;
+        const { error } = await supabaseClient.from('profiles').update({ gold: newGold }).eq('id', user.id);
+        
+        if (!error) {
+            localStorage.setItem(`daily_chk_${user.id}`, today);
+            user.gold = newGold;
+            alert("10,000G 출석 보상이 지급되었습니다!");
+            updateUI();
+        }
+    }
+
+    // GM 로그인 로직
+    function showGMLogin() { document.getElementById('gmLoginModal').style.display = 'flex'; }
+    function hideGMLogin() { document.getElementById('gmLoginModal').style.display = 'none'; }
+    function handleGMLogin() {
+        const u = document.getElementById('gmUsername').value;
+        const p = document.getElementById('gmPassword').value;
+        if(u === 'yejun' && p === '1234321') {
+            sessionStorage.setItem('gmAuthenticated', 'true');
+            location.href = 'gm.html';
+        } else { alert('인증 실패'); }
+    }
+
+    // 랭킹 로직
+    async function openRank() {
+        openModal('rank-modal');
+        const { data } = await supabaseClient.from('profiles').select('nickname, gold').order('gold', { ascending: false }).limit(10);
+        document.getElementById('rank-list').innerHTML = (data || []).map((u, i) => `
+            <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee;">
+                <span>${i+1}위 ${u.nickname || '익명'}</span>
+                <b>${(u.gold||0).toLocaleString()}G</b>
+            </div>
+        `).join('');
+    }
+
+    // 기타 필수 함수
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function openInfoModal() {
+        document.getElementById('edit-nick').value = user.nickname || "";
+        document.getElementById('edit-phone').value = user.phone || "";
+        document.getElementById('edit-avatar-prev').src = user.avatar_url || DEFAULT_AVATAR;
+        openModal('info-modal');
+    }
+    async function handleLogout() { await supabaseClient.auth.signOut(); location.href = "login.html"; }
+
     init();
 </script>
 </body>

@@ -22,7 +22,7 @@
         .user-stats { display: flex; gap: 15px; flex-wrap: wrap; }
         .conversion-section { margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px; width: 100%; }
         .conversion-row { display: flex; gap: 10px; margin-top: 5px; }
-        .conversion-row input { flex: 1; max-width: 100px; }
+        .conversion-row input { flex: 1; max-width: 100px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; }
         .stat-box { min-width: 120px; }
         .stat-label { font-size: 0.8em; color: #6c757d; }
         .stat-value { display: flex; align-items: center; gap: 5px; }
@@ -30,9 +30,7 @@
         .btn { padding: 5px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
         .btn-save { background-color: #28a745; color: white; }
         .btn-ban { background-color: #dc3545; color: white; }
-        .btn-convert { background-color: #17a2b8; color: white; margin-top: 5px; }
-        .gold { color: #f1c40f; }
-        .money { color: #9b59b6; }
+        .btn-convert { background-color: #17a2b8; color: white; }
         .notification { position: fixed; top: 20px; right: 20px; padding: 15px 20px; border-radius: 5px; color: white; opacity: 0; transition: 0.3s; z-index: 1000; }
         .notification.show { opacity: 1; }
         .success { background-color: #28a745; }
@@ -42,7 +40,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1><i class="fas fa-shield-alt"></i> GM 관리자 패널</h1>
+            <h1><i class="fas fa-shield-alt"></i> GM 관리자 패널 (codetbase)</h1>
             <button id="logoutBtn" class="btn btn-ban">로그아웃</button>
         </div>
         <div class="search-box">
@@ -55,37 +53,20 @@
     <div id="notification" class="notification"></div>
 
     <script>
-        // 1. 설정값
         const S_URL = 'https://utfrjzcnefsbuadnkdud.supabase.co';
         const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZnJqemNuZWZzYnVhZG5rZHVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4MjE1MTYsImV4cCI6MjA4MjM5NzUxNn0.D3Za1nMw-x0JwOpkFuYceUHlagcpRdrpFqNUIP5Kjdc';
         
-        let client; // supabase 대신 client라는 명칭 사용 (충돌 방지)
+        let client;
         let allUsers = [];
 
-        // 2. 초기화 함수
         async function init() {
             try {
-                // 라이브러리 존재 여부 확인 후 클라이언트 생성
                 if (window.supabase && window.supabase.createClient) {
-                    client = window.supabase.createClient(S_URL, S_KEY, {
-                        auth: {
-                            persistSession: true,
-                            autoRefreshToken: true,
-                            detectSessionInUrl: true
-                        }
-                    });
-                    
-                    // 세션 확인 (오류 처리만 남김)
-                    const { data: { session }, error } = await client.auth.getSession();
-                    
-                    if (error) {
-                        console.error('세션 확인 오류:', error);
-                    }
+                    client = window.supabase.createClient(S_URL, S_KEY);
                 } else {
                     throw new Error("Supabase 라이브러리가 로드되지 않았습니다.");
                 }
 
-                // 이벤트 바인딩
                 document.getElementById('logoutBtn').onclick = handleLogout;
                 document.getElementById('searchInput').oninput = filterUsers;
 
@@ -96,39 +77,21 @@
             }
         }
 
-        // 3. 데이터 로드
         async function loadUsers() {
             try {
-                console.log('사용자 데이터 로드 중...');
-                const { data, error, status } = await client
+                const { data, error } = await client
                     .from('profiles')
                     .select('*')
                     .order('created_at', { ascending: false });
 
-                console.log('사용자 데이터 로드 응답:', { status, data: data?.length, error });
-
-                if (error) {
-                    throw error;
-                }
-                
-                if (!data || !Array.isArray(data)) {
-                    throw new Error('잘못된 형식의 데이터를 받았습니다.');
-                }
-
-                allUsers = data;
-                renderUsers(data);
+                if (error) throw error;
+                allUsers = data || [];
+                renderUsers(allUsers);
             } catch (error) {
-                console.error('사용자 데이터 로드 실패:', error);
-                const errorMessage = error.message || '사용자 데이터를 불러오는데 실패했습니다.';
-                showNotification(errorMessage, 'error');
-                
-                // 오류 발생 시 빈 배열로 초기화
-                allUsers = [];
-                renderUsers([]);
+                showNotification('데이터 로드 실패: ' + error.message, 'error');
             }
         }
 
-        // 4. 화면 렌더링
         function renderUsers(users) {
             const list = document.getElementById('userList');
             if (!users || users.length === 0) {
@@ -172,144 +135,113 @@
                                 <option value="gold">GOLD → MONEY</option>
                                 <option value="money">MONEY → GOLD</option>
                             </select>
-                            <button class="btn btn-convert" onclick="convertUserCurrency('${u.id}')">변환</button>
+                            <button class="btn btn-convert" onclick="convertUserCurrency('${u.id}')">변환 실행</button>
                         </div>
-                        <div id="convert-result-${u.id}" style="margin-top: 5px; font-size: 0.8em; color: #28a745; display: none;"></div>
                     </div>
                 </div>
             `).join('');
         }
 
-        // 5. 검색
         function filterUsers() {
-            try {
-                const val = document.getElementById('searchInput').value.toLowerCase();
-                if (!val) {
-                    renderUsers(allUsers);
-                    return;
-                }
-                const filtered = allUsers.filter(u => 
-                    (u.email && u.email.toLowerCase().includes(val)) || 
-                    (u.nickname && u.nickname.toLowerCase().includes(val))
-                );
-                renderUsers(filtered);
-            } catch (error) {
-                console.error('검색 중 오류 발생:', error);
-                showNotification('검색 중 오류가 발생했습니다.', 'error');
-            }
+            const val = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allUsers.filter(u => 
+                (u.email && u.email.toLowerCase().includes(val)) || 
+                (u.nickname && u.nickname.toLowerCase().includes(val))
+            );
+            renderUsers(filtered);
         }
 
-        // 6. 업데이트 (저장)
         async function updateUser(id) {
             try {
                 const gold = parseInt(document.getElementById(`g-${id}`).value);
                 const money = parseInt(document.getElementById(`m-${id}`).value);
-                const lvl = parseInt(document.getElementById(`l-${id}`).value) || 0;
-                const goldToMoney = parseInt(document.getElementById(`gold-to-money-${id}`).value) || 0;
-                const moneyToGold = parseInt(document.getElementById(`money-to-gold-${id}`).value) || 0;
+                const lvl = parseInt(document.getElementById(`l-${id}`).value) || 1;
 
-                // 숫자 유효성 검사
-                if (isNaN(gold) || isNaN(money) || isNaN(lvl)) {
-                    showNotification('모든 필드에 유효한 숫자를 입력해주세요.', 'error');
+                if (isNaN(gold) || isNaN(money)) {
+                    showNotification('숫자를 입력해주세요.', 'error');
                     return;
                 }
 
-                // 레벨 범위 검사 (1~20)
-                if (lvl < 1 || lvl > 20) {
-                    showNotification('검 레벨은 1에서 20 사이여야 합니다.', 'error');
-                    return;
-                }
-
-                // 골드/머니 변환 검사
-                if (goldToMoney > 0 && moneyToGold > 0) {
-                    showNotification('골드→머니와 머니→골드 중 하나만 선택해주세요.', 'error');
-                    return;
-                }
-
-                let finalGold = gold;
-                let finalMoney = money;
-
-                // 골드 → 머니 변환
-                if (goldToMoney > 0) {
-                    if (gold < goldToMoney) {
-                        showNotification('보유한 골드가 부족합니다.', 'error');
-                        return;
-                    }
-                    finalGold -= goldToMoney;
-                    finalMoney += Math.floor(goldToMoney * 10);
-                }
-
-                // 머니 → 골드 변환
-                if (moneyToGold > 0) {
-                    if (money < moneyToGold) {
-                        showNotification('보유한 머니가 부족합니다.', 'error');
-                        return;
-                    }
-                    finalMoney -= moneyToGold;
-                    finalGold += Math.floor(moneyToGold / 10);
-                }
-
-                // 데이터베이스 업데이트
-                const { data, error } = await client
-                    .from('profiles')
-                    .update({
-                        gold: finalGold,
-                        money: finalMoney,
-                        current_sword_lvl: lvl,
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('id', id)
-                    .select();  // 업데이트된 데이터 반환
-
-                if (error) {
-                    console.error('업데이트 오류:', error);
-                    showNotification('업데이트 중 오류가 발생했습니다: ' + error.message, 'error');
-                    return;
-                }
-
-                if (data && data.length > 0) {
-                    showNotification('성공적으로 업데이트되었습니다!', 'success');
-                    // 업데이트된 데이터로 사용자 목록 갱신
-                    const userIndex = window.users.findIndex(u => u.id === id);
-                    if (userIndex !== -1) {
-                        window.users[userIndex] = { ...window.users[userIndex], ...data[0] };
-                        renderUsers(window.users);
-                    }
-                } else {
-                    showNotification('업데이트된 데이터를 가져오지 못했습니다.', 'error');
-                }
-            } catch (err) {
-                console.error('업데이트 중 오류 발생:', err);
-                showNotification('오류가 발생했습니다: ' + err.message, 'error');
-            }
-        }
-
-        // 7.2 정지 토글
-        async function toggleBan(id, status) {
-            try {
-                if(!confirm(status ? '해당 사용자를 정지하시겠습니까?' : '정지를 해제하시겠습니까?')) {
-                    return;
-                }
-                
                 const { error } = await client
                     .from('profiles')
-                    .update({ 
-                        is_banned: status,
+                    .update({
+                        gold,
+                        money,
+                        current_sword_lvl: lvl,
                         updated_at: new Date().toISOString()
                     })
                     .eq('id', id);
 
                 if (error) throw error;
-                
-                showNotification(status ? '사용자가 정지되었습니다.' : '정지가 해제되었습니다.', 'success');
+                showNotification('정보가 수정되었습니다.', 'success');
                 await loadUsers();
-            } catch (error) {
-                console.error('처리 실패:', error);
-                showNotification(`처리 실패: ${error.message}`, 'error');
+            } catch (err) {
+                showNotification('수정 실패: ' + err.message, 'error');
             }
         }
 
-        // 8. 기타 기능
+        async function convertUserCurrency(id) {
+            try {
+                const amount = parseInt(document.getElementById(`convert-amount-${id}`).value);
+                const type = document.getElementById(`convert-from-${id}`).value;
+                
+                if (isNaN(amount) || amount <= 0) {
+                    showNotification('변환할 금액을 입력하세요.', 'error');
+                    return;
+                }
+
+                const user = allUsers.find(u => u.id === id);
+                let finalGold = parseInt(user.gold || 0);
+                let finalMoney = parseInt(user.money || 0);
+
+                if (type === 'gold') {
+                    if (finalGold < amount) {
+                        showNotification('보유 골드가 부족합니다.', 'error');
+                        return;
+                    }
+                    finalGold -= amount;
+                    finalMoney += (amount * 100);
+                } else {
+                    if (finalMoney < amount) {
+                        showNotification('보유 머니가 부족합니다.', 'error');
+                        return;
+                    }
+                    finalMoney -= amount;
+                    finalGold += Math.floor(amount / 100);
+                }
+
+                const { error } = await client
+                    .from('profiles')
+                    .update({
+                        gold: finalGold,
+                        money: finalMoney,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', id);
+
+                if (error) throw error;
+                showNotification('변환이 완료되었습니다.', 'success');
+                await loadUsers();
+            } catch (err) {
+                showNotification('변환 중 오류 발생', 'error');
+            }
+        }
+
+        async function toggleBan(id, status) {
+            if(!confirm(status ? '정지하시겠습니까?' : '해제하시겠습니까?')) return;
+            try {
+                const { error } = await client
+                    .from('profiles')
+                    .update({ is_banned: status, updated_at: new Date().toISOString() })
+                    .eq('id', id);
+                if (error) throw error;
+                showNotification('상태가 변경되었습니다.', 'success');
+                await loadUsers();
+            } catch (error) {
+                showNotification('처리 실패', 'error');
+            }
+        }
+
         function showNotification(msg, type) {
             const n = document.getElementById('notification');
             n.textContent = msg;
@@ -318,17 +250,10 @@
         }
 
         async function handleLogout() {
-            try {
-                const { error } = await client.auth.signOut();
-                if (error) throw error;
-                window.location.href = 'index.html';
-            } catch (error) {
-                console.error('로그아웃 오류:', error);
-                showNotification('로그아웃 중 오류가 발생했습니다.', 'error');
-            }
+            await client.auth.signOut();
+            window.location.href = 'index.html';
         }
 
-        // 실행
         window.onload = init;
     </script>
 </body>

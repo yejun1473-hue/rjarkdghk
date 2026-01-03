@@ -16,10 +16,9 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #f1f1f1; /* PC 배경 여백 색상 */
+            background-color: #111; /* PC 배경 여백을 어둡게 설정 */
         }
 
-        /* 배경 이미지 설정 */
         .background-container {
             position: fixed;
             top: 0;
@@ -28,23 +27,23 @@
             width: 100%;
             height: 100%;
             background: url('https://i.ifh.cc/p6Vx7c.jpg') no-repeat center center;
-            background-size: cover; /* 기본은 꽉 차게 */
+            background-size: cover;
             -webkit-touch-callout: none;
             user-select: none;
             pointer-events: none;
             z-index: 1;
         }
 
-        /* PC 버전 (가로가 더 길 때) 비율 조정 */
         @media (min-aspect-ratio: 1/1) {
             .background-container {
                 width: auto;
-                aspect-ratio: 9 / 16; /* 세로형 이미지 비율 유지 */
+                aspect-ratio: 9 / 16;
                 background-size: contain;
                 height: 100%;
             }
         }
 
+        /* 버튼 컨테이너 - 위치 조정 핵심 */
         .content-overlay {
             position: relative;
             z-index: 2;
@@ -52,29 +51,33 @@
             height: 100%;
             display: flex;
             flex-direction: column;
-            justify-content: flex-end;
+            justify-content: flex-end; /* 아래쪽 기준 */
             align-items: center;
-            padding-bottom: 8%; /* 하단 여백 비율로 조정 */
+            /* 버튼을 밑바닥에서 전체 화면 높이의 20%만큼 띄움 (기존보다 많이 올림) */
+            padding-bottom: 20vh; 
         }
 
         .move-button {
             display: block;
             width: 80%;
             max-width: 320px;
-            padding: 15px 0;
-            background-color: #444;
-            color: #fff;
+            padding: 18px 0;
+            background-color: #3e3e3e; /* 버튼 색상 */
+            color: #ffffff;
             text-align: center;
             text-decoration: none;
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             font-weight: bold;
-            border-radius: 40px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border-radius: 12px; /* 살짝 각진 느낌으로 변경 (시안과 유사) */
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
             transition: 0.2s;
             -webkit-tap-highlight-color: transparent;
         }
 
-        .move-button:hover { background-color: #222; }
+        .move-button:active {
+            transform: scale(0.95);
+            background-color: #222;
+        }
     </style>
 </head>
 <body oncontextmenu="return false" onselectstart="return false">

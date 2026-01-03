@@ -3,51 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    
     <title>Up Sword</title>
-    
     <link rel="icon" href="https://i.ifh.cc/vXLMs6.jpg" type="image/x-icon">
-    <link rel="shortcut icon" href="https://i.ifh.cc/vXLMs6.jpg" type="image/x-icon">
-    
-    <meta property="og:title" content="Up Sword">
-    <meta property="og:image" content="https://i.ifh.cc/rvTcHw.jpg">
-    <meta property="og:description" content="자체 제작 강화게임 Up Sword">
-    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { background: #f0f0f0; font-family: 'Pretendard', sans-serif; margin: 0; padding: 20px 0; display: flex; flex-direction: column; align-items: center; }
         .app-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box; padding: 0 20px; }
-        
-        /* 프로필 카드 */
         .profile-card { background: white; border: 3px solid black; border-radius: 30px; padding: 20px; box-sizing: border-box; }
         .user-info { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
         .user-text h2 { margin: 0; font-size: 24px; font-weight: 900; }
         .profile-img { width: 70px; height: 70px; border-radius: 50%; border: 2px solid #000; object-fit: cover; background: #eee; }
-        
         .gold-box { background: #eee; border-radius: 20px; padding: 10px 20px; display: flex; flex-direction: column; gap: 5px; margin-bottom: 15px; }
         .gold-label { font-weight: 900; font-size: 22px; }
         .gold-value { color: #f39c12; font-weight: 900; font-size: 22px; }
         .money-value { color: #9b59b6; font-weight: 900; font-size: 22px; }
-
-        /* 2x2 버튼 그리드 (시안 반영) */
         .button-grid-container { background: white; border: 3px solid black; border-radius: 30px; padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .grid-btn { border: none; border-radius: 20px; padding: 12px; font-weight: 900; font-size: 18px; cursor: pointer; transition: 0.2s; }
         .btn-gray { background: #ddd; color: #333; }
         .btn-pink { background: #ff9a9e; color: #333; }
         .btn-purple { background: #d4bfff; color: #333; }
-
-        /* 게임 카드 */
         .game-selection { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .game-card { width: 100%; cursor: pointer; border-radius: 20px; overflow: hidden; border: 1px solid #ddd; }
         .game-card img { width: 100%; display: block; }
-
-        /* 하단 배너 및 메뉴 */
         .banner-container { width: 100%; border-radius: 15px; overflow: hidden; border: 1px solid #ddd; }
         .banner-container img { width: 100%; display: block; }
         .bottom-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .menu-btn { background: #c2cfff; border: none; border-radius: 20px; padding: 15px; font-weight: 900; font-size: 20px; cursor: pointer; }
-
-        /* 모달 스타일 */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; }
         .modal-content { background: white; width: 85%; max-width: 350px; border-radius: 25px; padding: 25px; position: relative; max-height: 90vh; overflow-y: auto; }
         .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; font-weight: bold; }
@@ -124,12 +105,13 @@
 
 <div id="gmLoginModal" class="modal">
     <div class="modal-content">
+        <span class="close-btn" onclick="closeModal('gmLoginModal')">&times;</span>
         <h2 style="text-align:center;">GM 로그인</h2>
         <div class="edit-group"><label>아이디</label><input type="text" id="gmUsername"></div>
         <div class="edit-group"><label>비밀번호</label><input type="password" id="gmPassword"></div>
         <div style="display: flex; gap: 10px;">
             <button class="btn-update" onclick="handleGMLogin()">로그인</button>
-            <button class="btn-logout" onclick="hideGMLogin()" style="background:#666;">취소</button>
+            <button class="btn-logout" onclick="closeModal('gmLoginModal')" style="background:#666;">취소</button>
         </div>
     </div>
 </div>
@@ -154,6 +136,21 @@
         if(error || !p) { window.location.href="login.html"; return; }
         
         user = p;
+
+        if (user.is_banned) {
+            document.body.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; text-align:center; padding:20px; background:#fff;">
+                    <h1 style="color:#e74c3c; font-size:30px; font-weight:900;">🚫 계정 접속 제한</h1>
+                    <div style="background:#f8d7da; border:2px solid #f5c6cb; padding:25px; border-radius:20px; margin:20px 0; width:100%; max-width:350px; box-sizing:border-box;">
+                        <p style="font-weight:bold; margin-bottom:10px; color:#721c24;">정지 사유</p>
+                        <p style="color:#721c24; word-break:break-all;">${user.ban_reason || '관리자 규정 위반으로 정지되었습니다.'}</p>
+                    </div>
+                    <button onclick="handleLogout()" style="padding:15px 40px; background:#2c3e50; color:white; border:none; border-radius:15px; font-weight:bold; cursor:pointer;">로그아웃</button>
+                </div>
+            `;
+            return;
+        }
+
         updateUI();
         document.getElementById('main-ui').style.display = 'flex';
     }
@@ -165,7 +162,54 @@
         document.getElementById('u-avatar').src = user.avatar_url || DEFAULT_AVATAR;
     }
 
-    // 내 정보 저장 로직 복구
+    // 1. 랭킹 작동
+    async function openRank() {
+        openModal('rank-modal');
+        const { data } = await supabaseClient.from('profiles').select('nickname, gold').order('gold', { ascending: false }).limit(10);
+        document.getElementById('rank-list').innerHTML = (data || []).map((u, i) => `
+            <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee;">
+                <span>${i+1}위 ${u.nickname || '익명'}</span>
+                <b>${(u.gold||0).toLocaleString()}G</b>
+            </div>
+        `).join('');
+    }
+
+    // 2. 출석체크 작동
+    async function handleDailyCheck() {
+        const today = new Date().toLocaleDateString();
+        const lastCheck = localStorage.getItem(`daily_chk_${user.id}`);
+        if (lastCheck === today) return alert("이미 오늘 출석하셨습니다.");
+        
+        const currentGold = user.gold || 0;
+        const { error } = await supabaseClient.from('profiles').update({ gold: currentGold + 10000 }).eq('id', user.id);
+        if (!error) {
+            localStorage.setItem(`daily_chk_${user.id}`, today);
+            alert("10,000G 지급 완료!");
+            location.reload();
+        }
+    }
+
+    // 3. GM 로그인 작동
+    function showGMLogin() { openModal('gmLoginModal'); }
+    function handleGMLogin() {
+        const id = document.getElementById('gmUsername').value;
+        const pw = document.getElementById('gmPassword').value;
+        if(id === 'yejun' && pw === '1234321') {
+            sessionStorage.setItem('gmAuthenticated', 'true');
+            window.location.href = 'gm.html';
+        } else {
+            alert('인증 실패');
+        }
+    }
+
+    // 4. 나의정보 작동
+    function openInfoModal() {
+        document.getElementById('edit-nick').value = user.nickname || "";
+        document.getElementById('edit-phone').value = user.phone || "";
+        document.getElementById('edit-avatar-prev').src = user.avatar_url || DEFAULT_AVATAR;
+        openModal('info-modal');
+    }
+
     async function saveMyInfo() {
         const btn = document.getElementById('save-btn');
         btn.innerText = "저장 중...";
@@ -183,11 +227,9 @@
                 .eq('id', user.id);
 
             if(updateError) throw updateError;
-
             if(newPw && newPw.length >= 6) { 
                 await supabaseClient.auth.updateUser({ password: newPw });
             }
-
             alert("정보가 수정되었습니다.");
             window.location.reload();
         } catch (e) {
@@ -196,6 +238,10 @@
             btn.disabled = false;
         }
     }
+
+    // 모달 관리 유틸리티
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
     async function uploadAndPreview(file) {
         if(!file) return;
@@ -206,48 +252,6 @@
     }
 
     function resetToDefaultAvatar() { document.getElementById('edit-avatar-prev').src = DEFAULT_AVATAR; }
-
-    async function handleDailyCheck() {
-        const today = new Date().toLocaleDateString();
-        const lastCheck = localStorage.getItem(`daily_chk_${user.id}`);
-        if (lastCheck === today) return alert("이미 오늘 출석하셨습니다.");
-        
-        const { error } = await supabaseClient.from('profiles').update({ gold: user.gold + 10000 }).eq('id', user.id);
-        if (!error) {
-            localStorage.setItem(`daily_chk_${user.id}`, today);
-            alert("10,000G 지급 완료!");
-            location.reload();
-        }
-    }
-
-    async function openRank() {
-        openModal('rank-modal');
-        const { data } = await supabaseClient.from('profiles').select('nickname, gold').order('gold', { ascending: false }).limit(10);
-        document.getElementById('rank-list').innerHTML = (data || []).map((u, i) => `
-            <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee;">
-                <span>${i+1}위 ${u.nickname || '익명'}</span>
-                <b>${(u.gold||0).toLocaleString()}G</b>
-            </div>
-        `).join('');
-    }
-
-    function showGMLogin() { openModal('gmLoginModal'); }
-    function hideGMLogin() { closeModal('gmLoginModal'); }
-    function handleGMLogin() {
-        if(document.getElementById('gmUsername').value === 'yejun' && document.getElementById('gmPassword').value === '1234321') {
-            sessionStorage.setItem('gmAuthenticated', 'true');
-            window.location.href = 'gm.html';
-        } else alert('인증 실패');
-    }
-
-    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-    function openInfoModal() {
-        document.getElementById('edit-nick').value = user.nickname || "";
-        document.getElementById('edit-phone').value = user.phone || "";
-        document.getElementById('edit-avatar-prev').src = user.avatar_url || DEFAULT_AVATAR;
-        openModal('info-modal');
-    }
     async function handleLogout() { await supabaseClient.auth.signOut(); window.location.href = "login.html"; }
 
     init();

@@ -29,77 +29,110 @@ let gameState = {
     isGameOver: false
 };
 
-// DOM Elements
-const elements = {
-    player1Name: document.getElementById('player1-name'),
-    player1Level: document.getElementById('player1-level'),
-    player1Hp: document.getElementById('player1-hp'),
-    player1HpBar: document.getElementById('player1-hp-bar'),
-    player1Attack: document.getElementById('player1-attack'),
-    
-    player2Name: document.getElementById('player2-name'),
-    player2Level: document.getElementById('player2-level'),
-    player2Hp: document.getElementById('player2-hp'),
-    player2HpBar: document.getElementById('player2-hp-bar'),
-    player2Attack: document.getElementById('player2-attack'),
-    
-    turnIndicator: document.getElementById('turn-indicator'),
-    battleLog: document.getElementById('battle-log'),
-    
-    attackBtn: document.getElementById('attack-btn'),
-    skillBtn: document.getElementById('skill-btn'),
-    runBtn: document.getElementById('run-btn'),
-    
-    victoryScreen: document.getElementById('victory-screen'),
-    victoryTitle: document.getElementById('victory-title'),
-    victoryMessage: document.getElementById('victory-message'),
-    rewardMessage: document.getElementById('reward-message')
-};
+// DOM Elements - initialized in DOMContentLoaded
+let elements = {};
+
+// Initialize DOM elements
+function initializeElements() {
+    elements = {
+        player1Name: document.getElementById('player1-name'),
+        player1Level: document.getElementById('player1-level'),
+        player1Hp: document.getElementById('player1-hp'),
+        player1HpBar: document.getElementById('player1-hp-bar'),
+        player1Attack: document.getElementById('player1-attack'),
+        
+        player2Name: document.getElementById('player2-name'),
+        player2Level: document.getElementById('player2-level'),
+        player2Hp: document.getElementById('player2-hp'),
+        player2HpBar: document.getElementById('player2-hp-bar'),
+        player2Attack: document.getElementById('player2-attack'),
+        
+        turnIndicator: document.getElementById('turn-indicator'),
+        battleLog: document.getElementById('battle-log'),
+        
+        attackBtn: document.getElementById('attack-btn'),
+        skillBtn: document.getElementById('skill-btn'),
+        runBtn: document.getElementById('run-btn'),
+        
+        victoryScreen: document.getElementById('victory-screen'),
+        victoryTitle: document.getElementById('victory-title'),
+        victoryMessage: document.getElementById('victory-message'),
+        rewardMessage: document.getElementById('reward-message')
+    };
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:58',message:'DOM elements initialized',data:{player1NameNull:!elements.player1Name,attackBtnNull:!elements.attackBtn,battleLogNull:!elements.battleLog},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    console.log('[DEBUG] Elements initialized', {player1NameNull:!elements.player1Name,attackBtnNull:!elements.attackBtn});
+    // #endregion
+}
 
 // Initialize the game
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('[BATTLE] DOMContentLoaded fired');
+    // Initialize DOM elements first
+    initializeElements();
+    console.log('[BATTLE] Elements initialized, checking...', {
+        attackBtn: !!elements.attackBtn,
+        player1Name: !!elements.player1Name,
+        battleLog: !!elements.battleLog
+    });
+    
     try {
         // Initialize Supabase
+        console.log('[BATTLE] Initializing Supabase client');
         window.supabase = supabase.createClient(
             'https://utfrjzcnefsbuadnkdud.supabase.co',
             'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZnJqemNuZWZzYnVhZG5rZHVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4MjE1MTYsImV4cCI6MjA4MjM5NzUxNn0.D3Za1nMw-x0JwOpkFuYceUHlagcpRdrpFqNUIP5Kjdc'
         );
+        console.log('[BATTLE] Supabase client created');
 
         // Check if user is authenticated
+        console.log('[BATTLE] Checking authentication');
         const { data: { session }, error: sessionError } = await window.supabase.auth.getSession();
         if (sessionError || !session) {
+            console.error('[BATTLE] Authentication failed', sessionError);
             window.location.href = 'login.html';
             return;
         }
+        console.log('[BATTLE] User authenticated', session.user.id);
 
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const battleId = urlParams.get('battleId');
         const isAI = urlParams.get('ai') === 'true';
+        console.log('[BATTLE] URL params', { battleId, isAI });
         
         // Initialize game based on battle type
         if (isAI) {
+            console.log('[BATTLE] Initializing AI battle');
             initAIBattle(urlParams);
         } else if (battleId) {
-            initPvPBattle(battleId, session.user.id);
+            console.log('[BATTLE] Initializing PvP battle', battleId);
+            await initPvPBattle(battleId, session.user.id);
         } else {
             throw new Error('잘못된 배틀 접근입니다.');
         }
+        console.log('[BATTLE] Battle initialized', gameState);
 
         // Set up event listeners
+        console.log('[BATTLE] Setting up event listeners');
         setupEventListeners();
+        console.log('[BATTLE] Event listeners set up');
         
         // Start the game
+        console.log('[BATTLE] Updating UI');
         updateUI();
         addToBattleLog('배틀이 시작되었습니다!');
+        console.log('[BATTLE] UI updated, battle started');
         
         // If it's AI's turn, make AI move
         if (gameState.isAIBattle && !gameState.player1.isTurn) {
+            console.log('[BATTLE] Starting AI turn');
             setTimeout(aiTurn, 1500);
         }
         
     } catch (error) {
-        console.error('게임 초기화 중 오류 발생:', error);
+        console.error('[BATTLE] 게임 초기화 중 오류 발생:', error);
+        console.error('[BATTLE] Error stack:', error.stack);
         alert('게임을 시작하는 중 오류가 발생했습니다: ' + error.message);
         window.location.href = 'index.html';
     }
@@ -137,7 +170,7 @@ function initAIBattle(urlParams) {
 async function initPvPBattle(battleId, userId) {
     try {
         // Fetch battle data from Supabase
-        const { data: battle, error } = await supabase
+        const { data: battle, error } = await window.supabase
             .from('battles')
             .select('*')
             .eq('id', battleId)
@@ -180,15 +213,34 @@ async function initPvPBattle(battleId, userId) {
 
 // Set up event listeners
 function setupEventListeners() {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:185',message:'setupEventListeners called',data:{attackBtnNull:!elements.attackBtn,skillBtnNull:!elements.skillBtn,runBtnNull:!elements.runBtn},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    console.log('[DEBUG] setupEventListeners called', {attackBtnNull:!elements.attackBtn,skillBtnNull:!elements.skillBtn,runBtnNull:!elements.runBtn});
+    // #endregion
+    
+    if (!elements.attackBtn || !elements.skillBtn || !elements.runBtn) {
+        console.error('[DEBUG] Cannot setup event listeners - buttons are null');
+        return;
+    }
+    
     // Attack button
     elements.attackBtn.addEventListener('click', () => {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:185',message:'Attack button clicked',data:{isGameOver:gameState.isGameOver,isPlayer1Turn:gameState.player1.isTurn,isAIBattle:gameState.isAIBattle},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         if (gameState.isGameOver || !gameState.player1.isTurn) return;
         
         // Calculate damage
         const damage = Math.max(1, gameState.player1.attack - Math.floor(Math.random() * gameState.player2.defense));
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:189',message:'Damage calculated',data:{damage:damage,player1Attack:gameState.player1.attack,player2Defense:gameState.player2.defense},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
         
         // Apply damage
         gameState.player2.hp = Math.max(0, gameState.player2.hp - damage);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:192',message:'Damage applied',data:{player2HpAfter:gameState.player2.hp,damage:damage,isAIBattle:gameState.isAIBattle},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         
         // Add to battle log
         addToBattleLog(`💥 ${gameState.player1.name}의 공격! ${gameState.player2.name}에게 ${damage}의 데미지를 입혔습니다!`);
@@ -209,8 +261,19 @@ function setupEventListeners() {
             // AI makes a move after a short delay
             setTimeout(aiTurn, 1500);
         } else {
-            // In PvP, update turn in database
+            // In PvP, update turn in database first (while turn state is still correct)
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:227',message:'PvP attack - before updateTurnInDatabase',data:{player1IsTurn:gameState.player1.isTurn,player2Hp:gameState.player2.hp},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
             updateTurnInDatabase();
+            
+            // Switch turn locally and update UI
+            gameState.player1.isTurn = false;
+            gameState.player2.isTurn = true;
+            updateUI();
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:234',message:'PvP attack - after updateTurnInDatabase and updateUI',data:{player1IsTurn:gameState.player1.isTurn,player2Hp:gameState.player2.hp},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
         }
     });
     
@@ -262,21 +325,30 @@ function aiTurn() {
 
 // Update turn in database (for PvP)
 async function updateTurnInDatabase() {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:286',message:'updateTurnInDatabase called',data:{battleId:gameState.battleId,player1IsTurnBefore:gameState.player1.isTurn},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     if (!gameState.battleId) return;
     
     try {
         const newTurn = gameState.player1.isTurn ? 'player2' : 'player1';
         
-        await supabase
+        await window.supabase
             .from('battles')
             .update({
                 current_turn: newTurn,
                 updated_at: new Date().toISOString()
             })
             .eq('id', gameState.battleId);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:298',message:'updateTurnInDatabase completed',data:{newTurn:newTurn,player1IsTurnAfter:gameState.player1.isTurn},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
             
     } catch (error) {
         console.error('턴 업데이트 오류:', error);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:301',message:'updateTurnInDatabase error',data:{error:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
     }
 }
 
@@ -289,33 +361,52 @@ function setupRealtimeUpdates(battleId, userId) {
 
 // Update UI based on game state
 function updateUI() {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:326',message:'updateUI called',data:{player1NameNull:!elements.player1Name,player1HpBarNull:!elements.player1HpBar,player2HpBarNull:!elements.player2HpBar,attackBtnNull:!elements.attackBtn},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    console.log('[DEBUG] updateUI called', {player1NameNull:!elements.player1Name,attackBtnNull:!elements.attackBtn,player1Hp:gameState.player1.hp,player2Hp:gameState.player2.hp});
+    // #endregion
+    
+    // Defensive checks - if elements are null, try to reinitialize them
+    if (!elements.player1Name || !elements.attackBtn) {
+        console.error('[DEBUG] Critical DOM elements are null, attempting to reinitialize');
+        initializeElements();
+    }
+    
     // Update player 1 UI
-    elements.player1Name.textContent = gameState.player1.name;
-    elements.player1Level.textContent = gameState.player1.level;
-    elements.player1Hp.textContent = `${Math.max(0, gameState.player1.hp)} / ${gameState.player1.maxHp}`;
-    elements.player1HpBar.style.width = `${(gameState.player1.hp / gameState.player1.maxHp) * 100}%`;
-    elements.player1Attack.textContent = gameState.player1.attack;
+    if (elements.player1Name) elements.player1Name.textContent = gameState.player1.name;
+    if (elements.player1Level) elements.player1Level.textContent = gameState.player1.level;
+    if (elements.player1Hp) elements.player1Hp.textContent = `${Math.max(0, gameState.player1.hp)} / ${gameState.player1.maxHp}`;
+    if (elements.player1HpBar && gameState.player1.maxHp > 0) {
+        const hpPercent = (gameState.player1.hp / gameState.player1.maxHp) * 100;
+        elements.player1HpBar.style.width = `${Math.max(0, Math.min(100, hpPercent))}%`;
+    }
+    if (elements.player1Attack) elements.player1Attack.textContent = gameState.player1.attack;
     
     // Update player 2 UI
-    elements.player2Name.textContent = gameState.player2.name;
-    elements.player2Level.textContent = gameState.player2.level;
-    elements.player2Hp.textContent = `${Math.max(0, gameState.player2.hp)} / ${gameState.player2.maxHp}`;
-    elements.player2HpBar.style.width = `${(gameState.player2.hp / gameState.player2.maxHp) * 100}%`;
-    elements.player2Attack.textContent = gameState.player2.attack;
+    if (elements.player2Name) elements.player2Name.textContent = gameState.player2.name;
+    if (elements.player2Level) elements.player2Level.textContent = gameState.player2.level;
+    if (elements.player2Hp) elements.player2Hp.textContent = `${Math.max(0, gameState.player2.hp)} / ${gameState.player2.maxHp}`;
+    if (elements.player2HpBar && gameState.player2.maxHp > 0) {
+        const hpPercent = (gameState.player2.hp / gameState.player2.maxHp) * 100;
+        elements.player2HpBar.style.width = `${Math.max(0, Math.min(100, hpPercent))}%`;
+    }
+    if (elements.player2Attack) elements.player2Attack.textContent = gameState.player2.attack;
     
     // Update turn indicator
-    if (gameState.player1.isTurn) {
-        elements.turnIndicator.textContent = `당신의 턴입니다!`;
-    } else if (gameState.isAIBattle) {
-        elements.turnIndicator.textContent = `${gameState.player2.name}의 턴...`;
-    } else {
-        elements.turnIndicator.textContent = `${gameState.player2.name}의 턴을 기다리는 중...`;
+    if (elements.turnIndicator) {
+        if (gameState.player1.isTurn) {
+            elements.turnIndicator.textContent = `당신의 턴입니다!`;
+        } else if (gameState.isAIBattle) {
+            elements.turnIndicator.textContent = `${gameState.player2.name}의 턴...`;
+        } else {
+            elements.turnIndicator.textContent = `${gameState.player2.name}의 턴을 기다리는 중...`;
+        }
     }
     
     // Update button states
-    elements.attackBtn.disabled = !gameState.player1.isTurn || gameState.isGameOver;
-    elements.skillBtn.disabled = true; // Disabled for now
-    elements.runBtn.disabled = gameState.isGameOver;
+    if (elements.attackBtn) elements.attackBtn.disabled = !gameState.player1.isTurn || gameState.isGameOver;
+    if (elements.skillBtn) elements.skillBtn.disabled = true; // Disabled for now
+    if (elements.runBtn) elements.runBtn.disabled = gameState.isGameOver;
     
     // Update HP bar colors
     updateHpBarColor('player1');
@@ -325,8 +416,12 @@ function updateUI() {
 // Update HP bar color based on HP percentage
 function updateHpBarColor(player) {
     const bar = player === 'player1' ? elements.player1HpBar : elements.player2HpBar;
+    if (!bar) return;
+    
     const hp = gameState[player].hp;
     const maxHp = gameState[player].maxHp;
+    if (maxHp <= 0) return;
+    
     const percent = (hp / maxHp) * 100;
     
     if (percent > 60) {
@@ -340,6 +435,8 @@ function updateHpBarColor(player) {
 
 // Add message to battle log
 function addToBattleLog(message) {
+    if (!elements.battleLog) return;
+    
     const logEntry = document.createElement('p');
     logEntry.textContent = message;
     elements.battleLog.insertBefore(logEntry, elements.battleLog.firstChild);
@@ -442,7 +539,7 @@ async function saveRewards(gold, exp) {
 // Update battle result in database (for PvP)
 async function updateBattleResult(isVictory) {
     try {
-        await supabase
+        await window.supabase
             .from('battles')
             .update({
                 status: 'completed',

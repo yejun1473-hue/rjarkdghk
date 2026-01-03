@@ -17,30 +17,27 @@ CREATE INDEX IF NOT EXISTS idx_battles_status ON public.battles(status);
 CREATE INDEX IF NOT EXISTS idx_battles_player1_id ON public.battles(player1_id);
 CREATE INDEX IF NOT EXISTS idx_battles_player2_id ON public.battles(player2_id);
 
--- Create RPC function to create battle table if not exists
-CREATE OR REPLACE FUNCTION public.create_battle_table_if_not_exists()
-RETURNS void
+-- Create RPC function to check if table exists
+CREATE OR REPLACE FUNCTION public.check_battle_table_exists()
+RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
+DECLARE
+    table_exists boolean;
 BEGIN
-    -- Table is already created above, so we just return success
-    RETURN;
+    SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE  table_schema = 'public'
+        AND    table_name   = 'battles'
+    ) INTO table_exists;
+    
+    RETURN table_exists;
 END;
 $$;
 
--- Create RPC function to directly create battle table
-CREATE OR REPLACE FUNCTION public.create_battle_table_directly()
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-BEGIN
-    -- This function is kept for backward compatibility
-    -- The table is now created by the migration
-    RETURN;
-END;
-$$;
+-- Grant execute permissions
+GRANT EXECUTE ON FUNCTION public.check_battle_table_exists() TO authenticated;
 
 -- Create a function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()

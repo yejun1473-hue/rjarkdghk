@@ -93,6 +93,31 @@
     let allUsers = [];
     let isUpgrading = false; // Flag to track if an upgrade is in progress
 
+    // Check if the player gets the hidden item (1% chance)
+    async function checkForHiddenItem() {
+        if (Math.random() < 0.01) { // 1% chance
+            const hiddenItem = {
+                level: 0, // Special level for hidden item
+                name: '제작자의 유골',
+                description: '이 검은 제작자의 영혼이 깃들어 있습니다. 매우 희귀한 아이템입니다.',
+                image_url: 'https://i.imgur.com/placeholder_hidden.png', // Replace with actual image URL
+                is_hidden: true
+            };
+            
+            // Add to swords data
+            swords[0] = hiddenItem;
+            
+            // Set as current sword
+            user.current_sword_lvl = 0;
+            await supabaseClient.from('profiles')
+                .update({ current_sword_lvl: 0 })
+                .eq('id', user.id);
+                
+            return true;
+        }
+        return false;
+    }
+
     async function init() {
         try {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -109,6 +134,14 @@
 
             const { data: sData } = await supabaseClient.from('sword_data').select('*').order('level');
             sData.forEach(d => swords[d.level] = d);
+            
+            // Check for hidden item (1% chance) if not already obtained
+            if (user.current_sword_lvl !== 0 && Math.random() < 0.01) {
+                const gotHiddenItem = await checkForHiddenItem();
+                if (gotHiddenItem) {
+                    alert('축하합니다! ★제작자의 유골★을 획득하셨습니다!');
+                }
+            }
 
             // Check if user is admin
             isAdmin = user.email === 'admin@example.com'; // 관리자 이메일로 변경 필요
@@ -125,6 +158,11 @@
     }
 
     function getSellPrice(level) {
+        // Special case for hidden item (4x normal price)
+        if (level === 0) {
+            return 40000; // 4x the price of a normal level 1 sword (1000 * 10 * 4)
+        }
+        
         // Calculate sell price based on level and add 10% bonus
         let basePrice;
         if (level === 20) {
@@ -145,7 +183,11 @@
 
     function updateUI() {
         const currentLevel = user.current_sword_lvl;
-        const item = swords[currentLevel] || swords[1];
+        const item = swords[currentLevel] || {
+            level: currentLevel,
+            name: getSwordName(currentLevel),
+            description: currentLevel >= 20 ? '전설적인 힘이 깃든 검입니다.' : '강력한 검입니다.'
+        };
         const upgradeCost = getEnhancementCost(currentLevel);
         const sellPrice = getSellPrice(currentLevel);
         const successRate = getSuccessRate(currentLevel);
@@ -153,83 +195,172 @@
         document.getElementById('u-nick').innerText = (user.username || '플레이어') + '님';
         document.getElementById('u-gold').innerText = (user.gold || 0).toLocaleString() + "G";
         document.getElementById('u-money').innerText = (user.money || 0).toLocaleString() + "M";
-        document.getElementById('s-name').innerText = `[+${item.level}] ${item.name}`;
-        document.getElementById('s-desc').innerText = item.description;
+        document.getElementById('s-name').innerText = `[+${currentLevel}] ${item.name || getSwordName(currentLevel)}`;
+        document.getElementById('s-desc').innerText = item.description || (currentLevel >= 20 ? '전설적인 힘이 깃든 검입니다.' : '강력한 검입니다.');
         document.getElementById('stat-cost').innerText = upgradeCost.toLocaleString();
         document.getElementById('stat-sell').innerText = sellPrice.toLocaleString();
         document.getElementById('stat-rate').innerText = successRate;
-        document.getElementById('s-img').src = item.image_url;
+        document.getElementById('s-img').src = item.image_url || 'default_sword.png';
+        
+        // Disable upgrade button if at max level
+        const upgradeBtn = document.querySelector('.btn-main');
+        if (currentLevel >= 30) {
+            upgradeBtn.disabled = true;
+            upgradeBtn.textContent = '최대 강화';
+            upgradeBtn.style.opacity = '0.7';
+        } else {
+            upgradeBtn.disabled = false;
+            upgradeBtn.textContent = '강화하기';
+            upgradeBtn.style.opacity = '1';
+        }
     }
     
     function getSuccessRate(level) {
+        // Special case for hidden item (lower success rate)
+        if (level === 0) {
+            return 1; // 1% success rate for hidden item
+        }
+        
         const rates = [
-            95,  // 0 → 1
-            90,  // 1 → 2
-            85,  // 2 → 3
-            80,  // 3 → 4
-            75,  // 4 → 5
-            70,  // 5 → 6
-            65,  // 6 → 7
-            60,  // 7 → 8
-            55,  // 8 → 9
-            50,  // 9 → 10
-            45,  // 10 → 11
-            40,  // 11 → 12
-            35,  // 12 → 13
-            30,  // 13 → 14
-            25,  // 14 → 15
-            20,  // 15 → 16
-            15,  // 16 → 17
-            10,  // 17 → 18
-            5,   // 18 → 19
-            1    // 19 → 20
+            95,   // 0 → 1
+            90,   // 1 → 2
+            85,   // 2 → 3
+            80,   // 3 → 4
+            75,   // 4 → 5
+            70,   // 5 → 6
+            65,   // 6 → 7
+            60,   // 7 → 8
+            55,   // 8 → 9
+            50,   // 9 → 10
+            45,   // 10 → 11
+            40,   // 11 → 12
+            35,   // 12 → 13
+            30,   // 13 → 14
+            25,   // 14 → 15
+            20,   // 15 → 16
+            15,   // 16 → 17
+            10,   // 17 → 18
+            5,    // 18 → 19
+            1,    // 19 → 20
+            0.8,  // 20 → 21
+            0.7,  // 21 → 22
+            0.6,  // 22 → 23
+            0.5,  // 23 → 24
+            0.4,  // 24 → 25
+            0.3,  // 25 → 26
+            0.2,  // 26 → 27
+            0.15, // 27 → 28
+            0.1,  // 28 → 29
+            0.05  // 29 → 30
         ];
-        return rates[level] || 0;
+        return level < rates.length ? rates[level] : 0.05;
+    }
+    
+    // Sword names for each level (0-30)
+    function getSwordName(level) {
+        const names = [
+            '낡은 검',           // 0
+            '보통 검',           // 1
+            '단단한 검',         // 2
+            '날카로운 검',       // 3
+            '강철 검',           // 4
+            '정교한 검',         // 5
+            '고급 검',           // 6
+            '영웅의 검',         // 7
+            '전설의 검',         // 8
+            '신의 검',           // 9
+            '태초의 검',         // 10
+            '천공의 검',         // 11
+            '지옥의 검',         // 12
+            '번개의 검',         // 13
+            '얼음의 검',         // 14
+            '화염의 검',         // 15
+            '바람의 검',         // 16
+            '대지의 검',         // 17
+            '빛의 검',           // 18
+            '어둠의 검',         // 19
+            '혼돈의 검',         // 20
+            '창세의 검',         // 21
+            '파멸의 검',         // 22
+            '구원의 검',         // 23
+            '영원의 검',         // 24
+            '초월의 검',         // 25
+            '전이의 검',         // 26
+            '심연의 검',         // 27
+            '우주의 검',         // 28
+            '창조의 검',         // 29
+            '절대자의 검'        // 30
+        ];
+        return names[Math.min(level, names.length - 1)];
     }
 
     function getEnhancementCost(level) {
-        // Enhancement costs from PRD
+        // Enhancement costs up to level 30
         const costs = [
-            100,        // 0 → 1
-            200,        // 1 → 2
-            400,        // 2 → 3
-            800,        // 3 → 4
-            1600,       // 4 → 5
-            3200,       // 5 → 6
-            6400,       // 6 → 7
-            12800,      // 7 → 8
-            25600,      // 8 → 9
-            51200,      // 9 → 10
-            102400,     // 10 → 11
-            204800,     // 11 → 12
-            409600,     // 12 → 13
-            819200,     // 13 → 14
-            1638400,    // 14 → 15
-            3276800,    // 15 → 16
-            6553600,    // 16 → 17
-            13107200,   // 17 → 18
-            26214400,   // 18 → 19
-            52428800    // 19 → 20
+            100,         // 0 → 1
+            200,         // 1 → 2
+            400,         // 2 → 3
+            800,         // 3 → 4
+            1600,        // 4 → 5
+            3200,        // 5 → 6
+            6400,        // 6 → 7
+            12800,       // 7 → 8
+            25600,       // 8 → 9
+            51200,       // 9 → 10
+            102400,      // 10 → 11
+            204800,      // 11 → 12
+            409600,      // 12 → 13
+            819200,      // 13 → 14
+            1638400,     // 14 → 15
+            3276800,     // 15 → 16
+            6553600,     // 16 → 17
+            13107200,    // 17 → 18
+            26214400,    // 18 → 19
+            52428800,    // 19 → 20
+            100000000,   // 20 → 21
+            200000000,   // 21 → 22
+            400000000,   // 22 → 23
+            800000000,   // 23 → 24
+            1600000000,  // 24 → 25
+            3200000000,  // 25 → 26
+            6400000000,  // 26 → 27
+            12800000000, // 27 → 28
+            25600000000, // 28 → 29
+            51200000000  // 29 → 30
         ];
-        return costs[level] || 0;
+        return level < costs.length ? costs[level] : costs[costs.length - 1] * Math.pow(2, level - costs.length + 1);
     }
 
     async function handleUpgrade() {
         if (isUpgrading) return;
+        isUpgrading = true;
         
         const currentLevel = user.current_sword_lvl;
-        const currentSword = swords[currentLevel];
         
-        // Get enhancement rates and cost based on current level
-        const rates = getEnhancementRates(currentLevel);
-        const upgradeCost = getEnhancementCost(currentLevel);
+        // Special case for hidden item - cannot be upgraded
+        if (currentLevel === 0) {
+            alert('이 아이템은 더 이상 강화할 수 없습니다.');
+            isUpgrading = false;
+            return;
+        }
         
-        if (upgradeCost <= 0) return alert("이미 최대 강화 레벨에 도달했습니다!");
-        if (user.gold < upgradeCost) return alert("골드가 부족합니다!");
-        if (currentLevel >= 20) return alert("최대 강화 레벨(20)에 도달했습니다!");
+        // Check if already at max level
+        if (currentLevel >= 30) {
+            alert('이미 최고 레벨입니다!');
+            isUpgrading = false;
+            return;
+        }
         
-        isUpgrading = true; // Set upgrading flag
-
+        const cost = getEnhancementCost(currentLevel);
+        const successRate = getSuccessRate(currentLevel);
+        
+        // Check if user has enough gold
+        if (user.gold < cost) {
+            alert('골드가 부족합니다!');
+            isUpgrading = false;
+            return;
+        }
+        
         const img = document.getElementById('s-img');
         img.classList.add('hammering');
         

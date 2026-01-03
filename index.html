@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>UP SWORD - 사이트 주소 변경</title>
+    <title>UP SWORD - 서버 점검 안내</title>
     
     <meta property="og:title" content="UP SWORD">
     <meta property="og:image" content="https://i.ifh.cc/PAbTb5.jpg">
@@ -16,78 +16,79 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #111; /* PC 배경 여백을 어둡게 설정 */
+            background-color: #d1d1d1;
         }
 
-        .background-container {
-            position: fixed;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100%;
-            height: 100%;
-            background: url('https://i.ifh.cc/p6Vx7c.jpg') no-repeat center center;
-            background-size: cover;
-            -webkit-touch-callout: none;
-            user-select: none;
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        @media (min-aspect-ratio: 1/1) {
-            .background-container {
-                width: auto;
-                aspect-ratio: 9 / 16;
-                background-size: contain;
-                height: 100%;
-            }
-        }
-
-        /* 버튼 컨테이너 - 위치 조정 핵심 */
-        .content-overlay {
+        .container {
             position: relative;
-            z-index: 2;
             width: 100%;
             height: 100%;
             display: flex;
-            flex-direction: column;
-            justify-content: flex-end; /* 아래쪽 기준 */
+            justify-content: center;
             align-items: center;
-            /* 버튼을 밑바닥에서 전체 화면 높이의 20%만큼 띄움 (기존보다 많이 올림) */
-            padding-bottom: 20vh; 
         }
 
-        .move-button {
-            display: block;
-            width: 80%;
-            max-width: 320px;
-            padding: 18px 0;
-            background-color: #3e3e3e; /* 버튼 색상 */
+        /* 배경 이미지 레이어 */
+        .bg-image-layer {
+            position: relative;
+            height: 100vh;
+            aspect-ratio: 9 / 16;
+            background: url('https://i.ifh.cc/NP9CX5.jpg') no-repeat center center;
+            background-size: contain;
+            -webkit-touch-callout: none;
+            user-select: none;
+            z-index: 1;
+        }
+
+        /* 실제 보이는 빨간색 고객센터 버튼 */
+        .cs-button {
+            position: absolute;
+            /* 버튼 위치 조정 (아래에서 33% 지점) */
+            bottom: 33.5%; 
+            left: 50%;
+            transform: translateX(-50%);
+            
+            /* 버튼 디자인 */
+            width: 55%;
+            max-width: 250px;
+            padding: 12px 0;
+            background-color: #e31e1e; /* 강렬한 빨간색 */
             color: #ffffff;
             text-align: center;
             text-decoration: none;
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             font-weight: bold;
-            border-radius: 12px; /* 살짝 각진 느낌으로 변경 (시안과 유사) */
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            transition: 0.2s;
+            border-radius: 50px; /* 둥근 버튼 */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            
+            z-index: 10;
+            display: block;
+            transition: transform 0.1s;
             -webkit-tap-highlight-color: transparent;
         }
 
-        .move-button:active {
-            transform: scale(0.95);
-            background-color: #222;
+        .cs-button:active {
+            transform: translateX(-50%) scale(0.95);
+            background-color: #b31616;
+        }
+
+        /* PC용 비율 대응 */
+        @media (max-aspect-ratio: 9/16) {
+            .bg-image-layer {
+                width: 100vw;
+                height: auto;
+            }
         }
     </style>
 </head>
 <body oncontextmenu="return false" onselectstart="return false">
 
-    <div class="background-container"></div>
-
-    <div class="content-overlay">
-        <a href="http://upsword.kro.kr/" class="move-button">
-            변경된 사이트로 이동
-        </a>
+    <div class="container">
+        <div class="bg-image-layer">
+            <a href="https://yejun1473-hue.github.io/Up-Sword/chat.html" class="cs-button">
+                고객센터
+            </a>
+        </div>
     </div>
 
 </body>

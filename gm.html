@@ -61,8 +61,8 @@
 
         async function init() {
             try {
-                if (window.supabase && window.supabase.createClient) {
-                    client = window.supabase.createClient(S_URL, S_KEY);
+                if (typeof supabase !== 'undefined' && supabase.createClient) {
+                    client = supabase.createClient(S_URL, S_KEY);
                 } else {
                     throw new Error("Supabase 라이브러리가 로드되지 않았습니다.");
                 }

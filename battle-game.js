@@ -265,10 +265,7 @@ async function initPvPBattle(battleId, userId) {
 
 // Set up event listeners
 function setupEventListeners() {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:185',message:'setupEventListeners called',data:{attackBtnNull:!elements.attackBtn,skillBtnNull:!elements.skillBtn,runBtnNull:!elements.runBtn},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
     console.log('[DEBUG] setupEventListeners called', {attackBtnNull:!elements.attackBtn,skillBtnNull:!elements.skillBtn,runBtnNull:!elements.runBtn});
-    // #endregion
     
     if (!elements.attackBtn || !elements.skillBtn || !elements.runBtn) {
         console.error('[DEBUG] Cannot setup event listeners - buttons are null');
@@ -277,22 +274,13 @@ function setupEventListeners() {
     
     // Attack button
     elements.attackBtn.addEventListener('click', () => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:185',message:'Attack button clicked',data:{isGameOver:gameState.isGameOver,isPlayer1Turn:gameState.player1.isTurn,isAIBattle:gameState.isAIBattle},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         if (gameState.isGameOver || !gameState.player1.isTurn) return;
         
         // Calculate damage
         const damage = Math.max(1, gameState.player1.attack - Math.floor(Math.random() * gameState.player2.defense));
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:189',message:'Damage calculated',data:{damage:damage,player1Attack:gameState.player1.attack,player2Defense:gameState.player2.defense},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
         
         // Apply damage
         gameState.player2.hp = Math.max(0, gameState.player2.hp - damage);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:192',message:'Damage applied',data:{player2HpAfter:gameState.player2.hp,damage:damage,isAIBattle:gameState.isAIBattle},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         
         // Add to battle log
         addToBattleLog(`💥 ${gameState.player1.name}의 공격! ${gameState.player2.name}에게 ${damage}의 데미지를 입혔습니다!`);
@@ -314,18 +302,12 @@ function setupEventListeners() {
             setTimeout(aiTurn, 1500);
         } else {
             // In PvP, update turn in database first (while turn state is still correct)
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:227',message:'PvP attack - before updateTurnInDatabase',data:{player1IsTurn:gameState.player1.isTurn,player2Hp:gameState.player2.hp},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
             updateTurnInDatabase();
             
             // Switch turn locally and update UI
             gameState.player1.isTurn = false;
             gameState.player2.isTurn = true;
             updateUI();
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:234',message:'PvP attack - after updateTurnInDatabase and updateUI',data:{player1IsTurn:gameState.player1.isTurn,player2Hp:gameState.player2.hp},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
         }
     });
     
@@ -377,9 +359,6 @@ function aiTurn() {
 
 // Update turn in database (for PvP)
 async function updateTurnInDatabase() {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:286',message:'updateTurnInDatabase called',data:{battleId:gameState.battleId,player1IsTurnBefore:gameState.player1.isTurn},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
     if (!gameState.battleId) return;
     
     try {
@@ -392,15 +371,9 @@ async function updateTurnInDatabase() {
                 updated_at: new Date().toISOString()
             })
             .eq('id', gameState.battleId);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:298',message:'updateTurnInDatabase completed',data:{newTurn:newTurn,player1IsTurnAfter:gameState.player1.isTurn},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
             
     } catch (error) {
         console.error('턴 업데이트 오류:', error);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:301',message:'updateTurnInDatabase error',data:{error:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
     }
 }
 
@@ -413,10 +386,7 @@ function setupRealtimeUpdates(battleId, userId) {
 
 // Update UI based on game state
 function updateUI() {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/eacc4797-bdd6-4f0f-88a3-8933967b8fd6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'battle-game.js:326',message:'updateUI called',data:{player1NameNull:!elements.player1Name,player1HpBarNull:!elements.player1HpBar,player2HpBarNull:!elements.player2HpBar,attackBtnNull:!elements.attackBtn},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
     console.log('[DEBUG] updateUI called', {player1NameNull:!elements.player1Name,attackBtnNull:!elements.attackBtn,player1Hp:gameState.player1.hp,player2Hp:gameState.player2.hp});
-    // #endregion
     
     // Defensive checks - if elements are null, try to reinitialize them
     if (!elements.player1Name || !elements.attackBtn) {
@@ -543,11 +513,11 @@ function endBattle(isVictory) {
 // Save rewards to database
 async function saveRewards(gold, exp) {
     try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        const { data: { user }, error: userError } = await window.supabase.auth.getUser();
         if (userError) throw userError;
         
         // Get current user data
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile, error: profileError } = await window.supabase
             .from('profiles')
             .select('gold, exp, level')
             .eq('id', user.id)
@@ -571,7 +541,7 @@ async function saveRewards(gold, exp) {
         }
         
         // Update profile
-        const { error: updateError } = await supabase
+        const { error: updateError } = await window.supabase
             .from('profiles')
             .update({
                 gold: newGold,

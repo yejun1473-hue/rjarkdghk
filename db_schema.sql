@@ -7,6 +7,27 @@
 alter table public.profiles
 add column if not exists current_weapon_type text not null default 'normal'
 check (current_weapon_type in ('normal','hidden'));
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'profiles'
+      and column_name = 'nickname'
+  ) then
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'profiles_nickname_len_25'
+    ) then
+      execute 'alter table public.profiles add constraint profiles_nickname_len_25 check (char_length(nickname) <= 25)';
+    end if;
+  end if;
+end$$;
+
+create index if not exists idx_profiles_nickname on public.profiles(nickname);
  
 -- 1) User swords: every sword the user owns
 create table if not exists public.user_swords (

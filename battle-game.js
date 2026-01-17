@@ -225,7 +225,7 @@ async function init() {
     catch (e) { alert('새로고침 실패: ' + (e?.message || e)); }
   });
 
-  setInterval(() => loadBattle().catch(() => {}), 2500);
+  setInterval(() => loadBattle().catch(() => {}), 5000);
 }
 
 init().catch(e => alert('초기화 오류: ' + (e?.message || e)));

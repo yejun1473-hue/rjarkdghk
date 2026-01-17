@@ -248,10 +248,10 @@
                 message = `강화 성공! [+${newLevel}레벨]`;
                 break;
             case 'maintain':
-                message = "강화 실패! (유지)";
+                message = "강화 실패!";
                 break;
             case 'drop':
-                newLevel = Math.max(0, currentLevel - 1);
+                newLevel = Math.max(1, currentLevel - 1);
                 message = `강화 실패! (${newLevel}레벨로 하락)`;
                 break;
             case 'destroy':
@@ -311,10 +311,10 @@
         // For level 1 to 2, ensure no destroy
         if (level === 1) {
             return { 
-                success: 90, 
-                maintain: 10, 
-                drop: 0, 
-                destroy: 0 
+                success: 90,
+                maintain: 0,
+                drop: 10,
+                destroy: 0
             };
         }
         

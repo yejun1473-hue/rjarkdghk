@@ -248,8 +248,28 @@
         }
 
         async function handleLogout() {
-            await client.auth.signOut();
-            window.location.href = 'index.html';
+            try {
+                // Initialize auth client if not already done
+                if (!client) {
+                    if (typeof supabase !== 'undefined' && supabase.createClient) {
+                        client = supabase.createClient(S_URL, S_KEY);
+                    } else {
+                        throw new Error("Supabase 라이브러리를 로드할 수 없습니다.");
+                    }
+                }
+                
+                // Clear any existing session
+                await client.auth.signOut();
+                
+                // Clear session storage
+                sessionStorage.removeItem('gmAuthenticated');
+                
+                // Redirect to index
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error('로그아웃 오류:', error);
+                alert('로그아웃 중 오류가 발생했습니다: ' + (error.message || error));
+            }
         }
 
         window.onload = init;

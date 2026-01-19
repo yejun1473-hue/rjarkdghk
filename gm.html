@@ -81,7 +81,7 @@
             try {
                 const { data, error } = await client
                     .from('profiles')
-                    .select('id, nickname, phone, email, gold, money, current_sword_lvl, is_banned, ban_reason')
+                    .select('id, nickname, phone, gold, money, current_sword_lvl, is_banned, ban_reason')
                     .order('nickname', { ascending: true });
 
                 if (error) throw error;
@@ -103,7 +103,6 @@
                 <div class="user-card ${u.is_banned ? 'banned' : ''}">
                     <div class="user-info">
                         <strong>${(u.nickname && u.nickname.trim()) ? u.nickname : '이름 없음'}</strong> ${u.is_banned ? '<span style="color:red">(정지)</span>' : ''}
-                        <div class="user-email">${u.email || ''}</div>
                     </div>
                     <div class="user-stats">
                         <div class="stat-box">
@@ -127,7 +126,7 @@
                     </div>
                     <div class="conversion-section">
                         <div style="font-size: 0.9em; margin-bottom: 5px; color: #6c757d;">
-                            <i class="fas fa-exchange-alt"></i> 재화 변환 (1 GOLD = 100 MONEY)
+                            <i class="fas fa-exchange-alt"></i> 재화 변환 (1 GOLD = 1000 MONEY)
                         </div>
                         <div class="conversion-row">
                             <input type="number" id="convert-amount-${u.id}" placeholder="금액" min="1">
@@ -144,8 +143,7 @@
 
         function filterUsers() {
             const val = document.getElementById('searchInput').value.toLowerCase();
-            const filtered = allUsers.filter(u => 
-                (u.email && u.email.toLowerCase().includes(val)) || 
+            const filtered = allUsers.filter(u =>
                 (u.nickname && u.nickname.toLowerCase().includes(val))
             );
             renderUsers(filtered);
